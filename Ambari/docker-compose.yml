@@ -1,7 +1,50 @@
 services:
-  host1:
-    image: rtsp/net-tools:latest
-    container_name: host1
-  host2:
-    image: rtsp/net-tools:latest
-    container_name: host2
+  bigtop_hostname0:
+    command: /sbin/init
+    domainname: bigtop.apache.org
+    container_name: bigtop_hostname0
+    hostname: bigtop_hostname0
+    image: bigtop/puppet:trunk-rockylinux-8
+    mem_limit: 8g
+    mem_swappiness: 0
+    ports:
+      - "8080:8080"
+    privileged: true
+    volumes:
+      - ./ambari-repo:/var/repo/ambari
+
+  bigtop_hostname1:
+    command: /sbin/init
+    domainname: bigtop.apache.org
+    container_name: bigtop_hostname1
+    hostname: bigtop_hostname1
+    image: bigtop/puppet:trunk-rockylinux-8
+    mem_limit: 8g
+    mem_swappiness: 0
+    privileged: true
+    volumes:
+      - ./ambari-repo:/var/repo/ambari
+
+  bigtop_hostname2:
+    command: /sbin/init
+    domainname: bigtop.apache.org
+    container_name: bigtop_hostname2
+    hostname: bigtop_hostname2
+    image: bigtop/puppet:trunk-rockylinux-8
+    mem_limit: 8g
+    mem_swappiness: 0
+    privileged: true
+    volumes:
+      - ./ambari-repo:/var/repo/ambari
+
+  bigtop_hostname3:
+    command: /sbin/init
+    domainname: bigtop.apache.org
+    container_name: bigtop_hostname3
+    hostname: bigtop_hostname3
+    image: bigtop/puppet:trunk-rockylinux-8
+    mem_limit: 8g
+    mem_swappiness: 0
+    privileged: true
+    volumes:
+      - ./ambari-repo:/var/repo/ambari
