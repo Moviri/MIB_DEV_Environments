@@ -1,0 +1,7 @@
+services:
+  host1:
+    image: rtsp/net-tools:latest
+    container_name: host1
+  host2:
+    image: rtsp/net-tools:latest
+    container_name: host2
