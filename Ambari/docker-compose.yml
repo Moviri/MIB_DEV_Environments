@@ -1,23 +1,24 @@
 services:
-  bigtop_hostname0:
+  bigtop-hostname0:
+    hostname: bigtop-hostname0.demo.local
     command: /sbin/init
+    container_name: bigtop-hostname0
     domainname: bigtop.apache.org
-    container_name: bigtop_hostname0
-    hostname: bigtop_hostname0
     image: bigtop/puppet:trunk-rockylinux-8
     mem_limit: 8g
     mem_swappiness: 0
     ports:
-      - "8080:8080"
+      - "8080:8080" # Ambari Server UI
+      - "3000:3000" # Ambari Metrics Grafana UI
     privileged: true
     volumes:
       - ./ambari-repo:/var/repo/ambari
 
-  bigtop_hostname1:
+  bigtop-hostname1:
+    hostname: bigtop-hostname1.demo.local
     command: /sbin/init
+    container_name: bigtop-hostname1
     domainname: bigtop.apache.org
-    container_name: bigtop_hostname1
-    hostname: bigtop_hostname1
     image: bigtop/puppet:trunk-rockylinux-8
     mem_limit: 8g
     mem_swappiness: 0
@@ -25,11 +26,11 @@ services:
     volumes:
       - ./ambari-repo:/var/repo/ambari
 
-  bigtop_hostname2:
+  bigtop-hostname2:
+    hostname: bigtop-hostname2.demo.local
     command: /sbin/init
+    container_name: bigtop-hostname2
     domainname: bigtop.apache.org
-    container_name: bigtop_hostname2
-    hostname: bigtop_hostname2
     image: bigtop/puppet:trunk-rockylinux-8
     mem_limit: 8g
     mem_swappiness: 0
@@ -37,11 +38,11 @@ services:
     volumes:
       - ./ambari-repo:/var/repo/ambari
 
-  bigtop_hostname3:
+  bigtop-hostname3:
+    hostname: bigtop-hostname3.demo.local
     command: /sbin/init
+    container_name: bigtop-hostname3
     domainname: bigtop.apache.org
-    container_name: bigtop_hostname3
-    hostname: bigtop_hostname3
     image: bigtop/puppet:trunk-rockylinux-8
     mem_limit: 8g
     mem_swappiness: 0
