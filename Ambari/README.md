@@ -1,0 +1,1 @@
+- make the scripts for Windows
