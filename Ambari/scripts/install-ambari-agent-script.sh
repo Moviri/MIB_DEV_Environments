@@ -16,15 +16,6 @@ gpgcheck=0
 enabled=1
 EOF
 
-if [ -z "$1" ]
-  then
-    echo "No hostname supplied"
-fi
-
-AMBARI_AGENT_HOSTNAME="$1"
-
-hostname $1
-
 # ambari agent
 yum install -y python3 python3-distro
 yum install -y java-17-openjdk-devel
