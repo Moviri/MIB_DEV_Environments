@@ -46,24 +46,3 @@ for i in $INSTANCES ; do
 done
 
 rm bigtop-hostname0.pub
-
-
-# setup hostname
-rm -f hosts
-echo '127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4
-::1         localhost localhost.localdomain localhost6 localhost6.localdomain6
-' > hosts
-for i in $INSTANCES ; do
-	docker compose cp getip.sh $i:/root/getip.sh
-	IP=$(docker compose exec -it $i /bin/bash /root/getip.sh)
-	HOSTNAME=$(docker compose exec -it $i hostname)
-	HOSTNAME_SHORT=$(docker compose exec -it $i hostname -f)
-	echo "$IP $HOSTNAME_SHORT $HOSTNAME" >> hosts
-done
-
-if [ $(basename $PWD) == "scripts" ] ; then
-	cat hosts > ../conf/hosts
-else
-	cat hosts > conf/hosts
-fi
-rm hosts
