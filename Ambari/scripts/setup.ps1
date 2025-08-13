@@ -5,7 +5,7 @@ Set-StrictMode -Version Latest
 
 # ---- Config ----
 $Instances = @('bigtop-hostname0','bigtop-hostname1','bigtop-hostname2','bigtop-hostname3')
-$InstancesWithout0 = @('bigtop-hostname1','bigtop-hostname2','bigtop-hostname3')
+# $InstancesWithout0 = @('bigtop-hostname1','bigtop-hostname2','bigtop-hostname3')
 
 function Exec($cmd, [switch]$CaptureOutput) {
     Write-Host ">> $cmd"
