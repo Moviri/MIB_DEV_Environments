@@ -18,18 +18,49 @@ yum -y install https://dev.mysql.com/get/mysql80-community-release-el8-1.noarch.
 
 yum -y install mysql-server
 
-rm -rf /var/lib/mysql/*
-mysqld --initialize
-chown -R mysql:mysql /var/lib/mysql
+# Check if MySQL data directory is already initialized
+if [ ! -d "/var/lib/mysql/mysql" ]; then
+    echo "Initializing MySQL data directory"
+    rm -rf /var/lib/mysql/*
+    mysqld --initialize
+    chown -R mysql:mysql /var/lib/mysql
+else
+    echo "MySQL data directory already exists, skipping initialization"
+fi
 
-MYSQL_ROOT_PASS=$(cat /var/log/mysql/mysqld.log |grep -i 'password is generated' |rev |cut -d ':' -f1 |rev |sed 's/\ //g')
-
-echo 'bind-address=0.0.0.0' >> /etc/my.cnf.d/mysql-server.cnf
+# Configure MySQL if not already configured
+if ! grep -q "bind-address=0.0.0.0" /etc/my.cnf.d/mysql-server.cnf; then
+    echo 'bind-address=0.0.0.0' >> /etc/my.cnf.d/mysql-server.cnf
+fi
 
 systemctl start mysqld.service
 systemctl enable mysqld.service
 
-echo "
+# Wait for MySQL to be ready
+sleep 5
+until [ -S /var/lib/mysql/mysql.sock ]; do
+    echo "Waiting for MySQL socket to be created..."
+    sleep 2
+done
+echo "MySQL socket is ready"
+
+# Check if MySQL is already configured by testing if we can connect with the final password
+if mysql -u root -pambarirootpass -e "SELECT 1;" &>/dev/null; then
+    echo "MySQL is already configured, skipping setup"
+else
+    echo "Setting up MySQL for the first time"
+    
+    # Extract the most recent temporary password (get the last occurrence)
+    MYSQL_ROOT_PASS=$(cat /var/log/mysql/mysqld.log | grep -i 'password is generated' | tail -1 | rev | cut -d ':' -f1 | rev | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')
+    
+    if [ -z "$MYSQL_ROOT_PASS" ]; then
+        echo "ERROR: Could not extract MySQL temporary password from log"
+        exit 1
+    fi
+    
+    echo "Extracted password length: ${#MYSQL_ROOT_PASS}"
+    
+    echo "
 ALTER USER 'root'@'localhost' IDENTIFIED WITH caching_sha2_password BY 'ambarirootpass';
 CREATE USER 'root'@'%.demo.local' IDENTIFIED WITH caching_sha2_password BY 'ambarirootpass';
 GRANT ALL PRIVILEGES ON *.* TO 'root'@'%.demo.local';
@@ -57,7 +88,8 @@ GRANT ALL PRIVILEGES ON rangerkms.* TO 'rangerkms'@'%';
 
 FLUSH PRIVILEGES;" > /root/ambari-server-setup.sql
 
-mysql --connect-expired-password -u root -p''${MYSQL_ROOT_PASS}'' < /root/ambari-server-setup.sql
+    mysql --connect-expired-password -u root -p"${MYSQL_ROOT_PASS}" < /root/ambari-server-setup.sql
+fi
 
 mysql --connect-expired-password -uambari -pambari ambari < /var/lib/ambari-server/resources/Ambari-DDL-MySQL-CREATE.sql
 
