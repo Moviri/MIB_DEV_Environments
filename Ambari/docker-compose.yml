@@ -3,7 +3,6 @@ services:
     hostname: bigtop-hostname0.demo.local
     command: /sbin/init
     container_name: bigtop-hostname0
-    domainname: bigtop.apache.org
     image: bigtop/puppet:trunk-rockylinux-8
     mem_limit: 8g
     mem_swappiness: 0
@@ -18,7 +17,6 @@ services:
     hostname: bigtop-hostname1.demo.local
     command: /sbin/init
     container_name: bigtop-hostname1
-    domainname: bigtop.apache.org
     image: bigtop/puppet:trunk-rockylinux-8
     mem_limit: 8g
     mem_swappiness: 0
@@ -30,7 +28,6 @@ services:
     hostname: bigtop-hostname2.demo.local
     command: /sbin/init
     container_name: bigtop-hostname2
-    domainname: bigtop.apache.org
     image: bigtop/puppet:trunk-rockylinux-8
     mem_limit: 8g
     mem_swappiness: 0
@@ -42,7 +39,6 @@ services:
     hostname: bigtop-hostname3.demo.local
     command: /sbin/init
     container_name: bigtop-hostname3
-    domainname: bigtop.apache.org
     image: bigtop/puppet:trunk-rockylinux-8
     mem_limit: 8g
     mem_swappiness: 0
