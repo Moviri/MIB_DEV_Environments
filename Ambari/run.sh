@@ -5,7 +5,6 @@ cd ./scripts
 
 SCRIPTS="
 setup-ambari-repo.sh
-setup-hostname.sh
 setup.sh
 install-ambari-server.sh
 install-ambari-agent.sh
