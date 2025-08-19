@@ -10,6 +10,7 @@ https://ambari.apache.org/docs/3.0.0/quick-start/environment-setup/docker-enviro
 
 Major differences is the streamlined installation for Windows environments, and minor bug fixes to scripts and docker-compose file
 
+
 ## Start the containers
 ```
 docker compose up -d
@@ -23,6 +24,9 @@ If on windows:
 
 If on *nix:
 ```
+# Makes all the script executable, pre-requisite
+find . -name "*.sh" -exec chmod +x {} \;
+
 ./run.sh
 ```
 
