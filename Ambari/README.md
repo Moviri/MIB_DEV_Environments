@@ -11,7 +11,7 @@ https://ambari.apache.org/docs/3.0.0/quick-start/environment-setup/docker-enviro
 Major differences is the streamlined installation for Windows environments, and minor bug fixes to scripts and docker-compose file
 
 
-## Start the containers
+## <a name="start"></a> Start the containers
 ```
 docker compose up -d
 ```
@@ -50,3 +50,16 @@ docker exec -it bigtop-hostname0 bash -c 'cat ~/.ssh/id_rsa'
 ```
 docker exec -it bigtop-hostname0 bash -c 'ambari-server restart'
 ```
+
+# Installing on AWS
+
+### Created instance:
+m4.2xlarge with Amazon Linux 2 100 GB storage Moviri and Ambari Security Groups
+
+[Installing Docker AL2](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-docker.html)
+
+AWS Installs Docker 25.0.8 by default, which doesn't install `docker compose` by default.
+
+[Installing Docker Compose plugin on Linux](https://docs.docker.com/compose/install/linux/#install-the-plugin-manually)
+
+Follow the [Run the Script](#start) documentation to run on linux
