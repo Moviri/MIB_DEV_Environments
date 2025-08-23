@@ -54,12 +54,10 @@ docker exec -it bigtop-hostname0 bash -c 'ambari-server restart'
 # Installing on AWS
 
 ### Created instance:
-m4.2xlarge with Amazon Linux 2 100 GB storage Moviri and Ambari Security Groups
+m4.2xlarge with Debian 13 100 GB storage Moviri and Ambari Security Groups
 
-[Installing Docker AL2](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-docker.html)
-
-AWS Installs Docker 25.0.8 by default, which doesn't install `docker compose` by default.
-
-[Installing Docker Compose plugin on Linux](https://docs.docker.com/compose/install/linux/#install-the-plugin-manually)
+[Installing Docker on Debian](https://docs.docker.com/engine/install/debian/)
 
 Follow the [Run the Script](#start) documentation to run on linux
+
+Added an additional patch to fix a odd issue where on EC2, the classpath has conflicting jars. Please use `fix-ams-classpath.sh` to fix this specific error when Metric Server is throwing 500 errors.
