@@ -338,3 +338,15 @@ spec:
         storage: 2Gi
       defaultRequest:
         storage: 2Gi
+---
+#####################################################################
+# Enable User Workload Monitoring
+#####################################################################
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cluster-monitoring-config
+  namespace: openshift-monitoring
+data:
+  config.yaml: |
+    enableUserWorkload: true
