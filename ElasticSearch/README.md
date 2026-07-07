@@ -50,7 +50,7 @@ The sample documents include:
 * `event.module`
 * `message`
 
-These fields cover the standard Windows/*nix host filter examples and the generic query examples in `../MIB_DEV_ElasticSearch/resources`.
+These fields cover the standard Windows/*nix host filter examples and the generic query examples in `MIB_DEV_ElasticSearch/resources`.
 
 ## Dynatrace Extension configuration
 
@@ -62,7 +62,7 @@ Username: elastic
 Password: password
 ```
 
-The Compose setup uses self-signed certificates. For local development, configure the extension to allow the generated CA/self-signed certificate, or run it in the same trust context used by `../python-elasticsearch/lab`.
+The Compose setup uses self-signed certificates. For local development, configure the extension to allow the generated CA/self-signed certificate, or run it in the same trust context used by `python-elasticsearch/lab`.
 
 ## Java ETL configuration notes
 
@@ -76,7 +76,7 @@ extract.elasticsearch.password=password
 extract.elasticsearch.index=metricbeat-*
 ```
 
-Existing sample configs such as `../MIB_DEV_ElasticSearch/resources/localhost.conf` use `http://localhost:9200` and `authMethod=None`. Update those values when pointing the ETL at this Compose cluster.
+Existing sample configs such as `MIB_DEV_ElasticSearch/resources/localhost.conf` use `http://localhost:9200` and `authMethod=None`. Update those values when pointing the ETL at this Compose cluster.
 
 For generic query testing against the seeded data, `filebeat-*` can be used with filters on `event.module`, `host.name`, or `message`.
 
