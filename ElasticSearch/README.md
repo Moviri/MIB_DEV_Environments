@@ -1,6 +1,6 @@
 # ElasticSearch development environment
 
-This environment starts a three-node ElasticSearch cluster and Kibana using Docker Compose. It is based on the lab setup from `../python-elasticsearch/lab`, so it works for the Dynatrace ElasticSearch extension and as a local target for the Java ETL in `../MIB_DEV_ElasticSearch`.
+This environment starts a three-node ElasticSearch cluster and Kibana using Docker Compose. It is based on the lab setup from `python-elasticsearch/lab`, so it works for the Dynatrace ElasticSearch extension and as a local target for the Java ETL in `MIB_DEV_ElasticSearch`.
 
 ## Start the cluster
 
