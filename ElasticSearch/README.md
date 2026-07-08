@@ -2,6 +2,27 @@
 
 This environment starts a three-node ElasticSearch cluster and Kibana using Docker Compose. It is based on the lab setup from `python-elasticsearch/lab`, so it works for the Dynatrace ElasticSearch extension and as a local target for the Java ETL in `MIB_DEV_ElasticSearch`.
 
+## Prerequisites
+
+ElasticSearch requires the host `vm.max_map_count` setting to be at least `262144`. Check the current value before starting the cluster:
+
+```bash
+sysctl vm.max_map_count
+```
+
+If the value is lower than `262144`, update it:
+
+```bash
+sudo sysctl -w vm.max_map_count=262144
+```
+
+To make the setting persistent on Linux hosts:
+
+```bash
+echo "vm.max_map_count=262144" | sudo tee /etc/sysctl.d/99-elasticsearch.conf
+sudo sysctl --system
+```
+
 ## Start the cluster
 
 ```bash
@@ -92,4 +113,14 @@ Remove the cluster data and generated certificates:
 
 ```bash
 docker compose down -v
+```
+
+## Troubleshooting
+
+If a node exits with `bootstrap checks failed` and `vm.max_map_count [65530] is too low`, update the host setting from the prerequisites section and restart the cluster:
+
+```bash
+docker compose down
+sudo sysctl -w vm.max_map_count=262144
+docker compose up -d
 ```
