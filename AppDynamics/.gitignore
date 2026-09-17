@@ -1,0 +1,13 @@
+.env
+.env.*
+!.env.example
+agents/java/*
+!agents/java/.gitkeep
+agents/machine/*
+!agents/machine/.gitkeep
+target/
+.m2/
+artifacts/
+__pycache__/
+*.log
+*.zip

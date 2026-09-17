@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Capital Lab · Financial workload</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header><span class="brand">C<span class="brand-mark">/</span>L</span><strong>CAPITAL LAB</strong><span class="tag">SYNTHETIC FINANCIAL WORKLOAD</span><span id="health" class="health">Connecting…</span></header>
+  <main>
+    <div class="intro"><p class="eyebrow">APPLICATION OBSERVABILITY LAB</p><h1>Every transaction<br>tells a story.</h1><p>Explore a loan workflow across three services. Generate approvals, declines, latency, and errors for your AppDynamics environment.</p></div>
+    <div class="flow" aria-label="Service flow"><span>01 <b>Portal</b></span><i>→</i><span>02 <b>Verification</b></span><i>→</i><span>03 <b>Loan processing</b></span><i>↔</i><span class="db"><b>PostgreSQL</b></span></div>
+    <section class="metrics" aria-label="Portfolio totals">
+      <article><p>Applications processed</p><strong id="total">—</strong><small>Persisted loan decisions</small></article>
+      <article><p>Approved</p><strong id="approved">—</strong><small>Credit threshold met</small></article>
+      <article><p>Declined</p><strong id="declined">—</strong><small>Business outcome · HTTP 200</small></article>
+      <article><p>Approved amount</p><strong id="amount">—</strong><small>Synthetic USD</small></article>
+    </section>
+    <div class="workspace">
+      <section class="panel"><div class="section-title"><span class="eyebrow">TRY A TRANSACTION</span><span class="badge">100 test customers</span></div>
+        <h2>Submit a loan application</h2>
+        <form id="application">
+          <label>Customer ID<input id="customer" type="number" min="1" max="100" value="10" required></label>
+          <div class="fields"><label>Loan amount · USD<input id="loanAmount" type="number" min="100" max="100000" step="0.01" value="5000" required></label><label>Term · months<input id="term" type="number" min="12" max="84" value="24" required></label></div>
+          <label>Workload scenario<select id="scenario"><option value="NORMAL">Normal transaction</option><option value="SLOW">Slow verification · +2 seconds</option><option value="SQL_SLOW">Slow database query · +1.5 seconds</option><option value="ERROR">Verification failure · HTTP 500</option><option value="CPU">CPU work · 300 milliseconds</option></select></label>
+          <button id="submit" type="submit">Submit application <span>↗</span></button>
+        </form>
+        <div id="result" role="status" class="result">Ready. Customer 10 produces an approval; customer 1 produces a decline.</div>
+      </section>
+      <section class="panel transactions"><div class="section-title"><span class="eyebrow">LIVE LEDGER</span><button id="refresh" class="text-button">Refresh ↻</button></div><h2>Recent applications</h2>
+        <div class="table-wrap"><table><thead><tr><th>Customer</th><th>Amount</th><th>Decision</th><th>Time</th></tr></thead><tbody id="loans"><tr><td colspan="4">No transactions yet.</td></tr></tbody></table></div>
+      </section>
+    </div>
+    <footer><span>Capital Lab · Independent demo inspired by AD-Capital</span><span>Synthetic data only · No financial services</span></footer>
+  </main>
+  <script src="/app.js"></script>
+</body>
+</html>
