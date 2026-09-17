@@ -62,7 +62,7 @@ Open **http://localhost:8088**. The demo runs immediately with the default confi
    docker compose logs -f loadgen
    ```
 
-Expected application: **Capital-Lab**; tiers: **Portal**, **Verification**, **Loan-Processing**. Each JVM gets a node name containing its role and container hostname. Nodes survive ordinary container restarts; recreating a container creates a new node identity, useful for testing discovery. All JVMs use one `APPDYNAMICS_AGENT_UNIQUE_HOST_ID` for their Docker host. Assign a different ID in Boston.
+Expected application: **Capital-Lab**; tiers: **Portal**, **Verification**, **Loan-Processing**. Each JVM gets a node name containing its role and container hostname. Nodes survive ordinary container restarts; recreating a container creates a new node identity, useful for testing discovery. All JVMs use one `APPDYNAMICS_AGENT_UNIQUE_HOST_ID` for their Docker host. Assign a different ID to each host when running multiple deployments.
 
 The agent is mounted read-only; its runtime files and logs are written to `/tmp/appdynamics` inside each Java container. Agent binaries and `.env` are excluded from Git and the image build context. The downloaded ZIP and extracted `controller-info.xml` also contain trial configuration, so keep them private. The image contains no trial credentials. Avoid sharing output from `docker compose config` or `docker inspect`, since those can include secrets. `docker compose config --quiet` validates without printing them.
 
@@ -85,6 +85,20 @@ Requests contain `requestId` (UUID), `customerId` (1–100), `amount` (100–100
 
 The default generator cycles every five minutes through **normal → peak → slow → errors → recovery**, repeating every 25 minutes. It targets 2 requests/sec normally and 6 at peak, with at most 8 concurrent requests. About 75% of calls are loan submissions; the rest are reads. It skips scheduled requests when concurrency is full instead of building an unbounded queue. Logs distinguish HTTP responses, network errors and capacity skips; actual throughput is not guaranteed.
 
+### Expected HTTP 500 responses
+
+During the five-minute **errors** phase, the generator sends `scenario=ERROR` on approximately 25% of loan submissions (about 19% of all requests in that phase). Verification deliberately throws `Synthetic verification failure requested by scenario ERROR`, and Portal returns HTTP 500. These failures populate AppDynamics error counts and snapshots for ETL testing. Normal loan declines still return HTTP 200.
+
+The generator's status counters are **cumulative since it started**. A log line containing `"500": 313` during normal or recovery traffic does not mean new failures occurred; compare the counter with the previous line. Unexpected exception messages, new 500s during healthy traffic, or unhealthy containers should still be investigated.
+
+For automatic traffic with no injected faults, set `LOAD_PATTERN=normal` in `.env` and recreate the generator:
+
+```sh
+docker compose --profile load up -d --force-recreate loadgen
+```
+
+To also reject manually requested fault scenarios, set `DEMO_FAILURES_ENABLED=false` and recreate the application services with `docker compose up -d --wait`. Keep the generator on `normal` in that case; fault requests are rejected with HTTP 400 when fault injection is disabled.
+
 Tune `LOAD_RPS`, `LOAD_WORKERS`, `LOAD_PHASE_SECONDS` and `LOAD_PATTERN` in `.env`, then recreate the generator. Valid fixed patterns are `normal`, `peak`, `slow`, `errors`, `recovery`, and `cpu`. Keep each phase long enough to span multiple Controller/ETL sample intervals. The default runs until stopped; for a finite job:
 
 ```powershell
@@ -106,7 +120,7 @@ Alternatively, with Python installed: `python scripts/smoke.py`. The suite check
 
 ## Moviri / BMC ETL validation
 
-The local connector's `MatchAndGap.java` maps calls to `TOTAL_EVENTS`, response time to `EVENT_RESPONSE_TIME` (milliseconds converted to seconds), and errors to `TOTAL_ERRORS`. Its API client also requests tier/node metrics under the paths below. This lab is designed to exercise those existing paths without modifying the connector.
+The Moviri AppDynamics connector's `MatchAndGap.java` maps calls to `TOTAL_EVENTS`, response time to `EVENT_RESPONSE_TIME` (milliseconds converted to seconds), and errors to `TOTAL_ERRORS`. Its API client also requests tier/node metrics under the paths below. This lab is designed to exercise those existing paths without modifying the connector.
 
 | Data to verify | Controller metric path / prerequisite |
 |---|---|
@@ -115,11 +129,11 @@ The local connector's `MatchAndGap.java` maps calls to `TOTAL_EVENTS`, response 
 | Node performance | `Overall Application Performance\|<tier>\|Individual Nodes\|<node>\|<metric>` |
 | Business transaction performance | `Business Transaction Performance\|Business Transactions\|<tier>\|<transaction>\|<metric>` |
 | JVM heap / threads | `Application Infrastructure Performance\|<tier>\|Individual Nodes\|<node>\|JVM\|...` |
-| Host CPU / memory / disk / network | Matching **Machine Agent**; see [Linux deployment](docs/linux-deployment.md) |
+| Host CPU / memory / disk / network | Matching **Machine Agent**; see [Deployment guide](docs/deployment.md) |
 | Database server metrics | Separate **Database Agent/collector** and applicable entitlement; a JDBC backend alone does not provide these |
 
 1. Keep traffic running for at least 30–60 minutes and record the workload phase times from generator logs in UTC or align their elapsed times with the container start time.
-2. Confirm the three tiers, their nodes, HTTP edges, JDBC backend, and nonempty metric samples in the Controller. Exclude `/health` and static assets from business-transaction discovery if they clutter the view. In **Business Transactions → Configure → Java Auto Discovery Rule → Rule Configuration → Servlet → Configure Naming**, select **Use the full URI**. This separates `/api/loans/apply`, `/api/loans/recent`, and `/api/reports/portfolio`; all are stable paths. This setting was saved in the initial trial application. Historical transactions created under the former two-segment rule remain in the Controller until its normal retention/cleanup processes apply.
+2. Confirm the three tiers, their nodes, HTTP edges, JDBC backend, and nonempty metric samples in the Controller. Exclude `/health` and static assets from business-transaction discovery if they clutter the view. In **Business Transactions → Configure → Java Auto Discovery Rule → Rule Configuration → Servlet → Configure Naming**, select **Use the full URI**. This separates `/api/loans/apply`, `/api/loans/recent`, and `/api/reports/portfolio`; all are stable paths. Historical transactions created under a different naming rule remain in the Controller until its normal retention/cleanup processes apply.
 3. Run the existing ETL against this trial with application filtering set to `Capital-Lab`, using a time interval containing reported samples. The **agent account access key is not the ETL's API credential**; use the connector's supported Controller API user or OAuth client configuration.
 4. Compare discovered application/tier/node/transaction relationships and event/latency/error trends against the Controller for the same interval. A decline is not a technical error; an injected `ERROR` is. Keep rate versus count aggregation and the connector's millisecond-to-second conversion in mind.
 5. Test incremental extraction and overlap behavior, then optionally scale a service and confirm new node discovery:
@@ -132,9 +146,9 @@ The local connector's `MatchAndGap.java` maps calls to `TOTAL_EVENTS`, response 
 
 APM/JVM data works with the Java agents. Hardware, Server Visibility, Database Visibility, EUM and Transaction Analytics are separate capabilities; do not interpret their missing data as an ETL failure unless the relevant agent/collector and trial entitlement are configured. This lab does not enable Analytics or recreate AD-Capital's JMS queue workflow.
 
-## Operate and move to Boston
+## Operation and deployment
 
-See [Linux deployment](docs/linux-deployment.md) for copying the project, keeping credentials private, remote browser access and host hardware monitoring.
+See the [Deployment guide](docs/deployment.md) for copying the project, keeping credentials private, remote browser access and host hardware monitoring.
 
 ```powershell
 docker compose ps

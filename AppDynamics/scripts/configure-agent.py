@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parent.parent
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("archive", type=Path)
-    parser.add_argument("--host-id", default="capital-lab-windows-docker")
+    parser.add_argument("--host-id", default="capital-lab-host-01")
     args = parser.parse_args()
     if not re.fullmatch(r"[A-Za-z0-9_.-]+", args.host_id):
         parser.error("Use letters, digits, dots, dashes or underscores in the host ID.")

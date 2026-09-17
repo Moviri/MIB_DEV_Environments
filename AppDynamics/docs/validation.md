@@ -1,6 +1,6 @@
 # Local validation — September 17, 2026
 
-Validated on Windows Docker Desktop using its Linux engine. This report describes the local run, not a Boston deployment.
+Validated on Windows Docker Desktop using its Linux engine. The observations below describe that test run.
 
 - Built the application with Java 21 and Spring Boot 3.5.16 inside Docker.
 - Installed the configured AppDynamics Java Agent 26.7.0.38091 from the trial Controller's download wizard. Its connection settings are kept in the ignored `.env` and agent directory.
@@ -15,4 +15,4 @@ Validated on Windows Docker Desktop using its Linux engine. This report describe
 - Changed this application's Java servlet naming rule from the first two URI segments to the full URI so each stable demo API route can be discovered separately.
 - Built and inspected the source-only deployment ZIP; it excludes `.env`, downloaded agent payloads, logs and build outputs.
 
-Not validated here: execution of the Moviri/BMC ETL itself, Boston host deployment, Linux Machine Agent hardware collection, Database Agent server metrics, or Analytics/EUM. The README and Linux guide describe the prerequisites for those follow-on checks. AppDynamics JDBC timing is verified; it is not equivalent to Database Visibility server telemetry.
+Not validated here: execution of the Moviri/BMC ETL itself, deployment on another host, Machine Agent hardware collection, Database Agent server metrics, or Analytics/EUM. The README and [Deployment guide](deployment.md) describe the prerequisites for those follow-on checks. AppDynamics JDBC timing is verified; it is not equivalent to Database Visibility server telemetry.
