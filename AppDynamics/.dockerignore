@@ -1,0 +1,9 @@
+.git
+.env
+.env.*
+agents
+target
+.m2
+artifacts
+*.zip
+**/__pycache__

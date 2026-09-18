@@ -1,0 +1,113 @@
+name: capital-lab
+
+x-java-environment: &java-environment
+  DB_PASSWORD: ${DB_PASSWORD:-capital-local-only}
+  DEMO_FAILURES_ENABLED: ${DEMO_FAILURES_ENABLED:-true}
+  APPDYNAMICS_ENABLED: ${APPDYNAMICS_ENABLED:-false}
+  APPDYNAMICS_CONTROLLER_HOST_NAME: ${APPDYNAMICS_CONTROLLER_HOST_NAME:-}
+  APPDYNAMICS_CONTROLLER_PORT: ${APPDYNAMICS_CONTROLLER_PORT:-443}
+  APPDYNAMICS_CONTROLLER_SSL_ENABLED: ${APPDYNAMICS_CONTROLLER_SSL_ENABLED:-true}
+  APPDYNAMICS_AGENT_ACCOUNT_NAME: ${APPDYNAMICS_AGENT_ACCOUNT_NAME:-}
+  APPDYNAMICS_AGENT_ACCOUNT_ACCESS_KEY: ${APPDYNAMICS_AGENT_ACCOUNT_ACCESS_KEY:-}
+  APPDYNAMICS_AGENT_APPLICATION_NAME: ${APPDYNAMICS_AGENT_APPLICATION_NAME:-Capital-Lab}
+  APPDYNAMICS_AGENT_UNIQUE_HOST_ID: ${APPDYNAMICS_AGENT_UNIQUE_HOST_ID:-capital-lab-host-01}
+
+x-java: &java
+  image: capital-lab:local
+  build: .
+  restart: unless-stopped
+  mem_limit: 1g
+  cpus: 1.0
+  volumes:
+    - ./agents/java:/opt/appdynamics:ro
+  healthcheck:
+    test: [CMD, curl, --fail, --silent, --max-time, '5', http://localhost:8080/health]
+    interval: 15s
+    timeout: 6s
+    retries: 8
+    start_period: 60s
+  depends_on:
+    postgres:
+      condition: service_healthy
+
+services:
+  postgres:
+    image: postgres:17-bookworm
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: capital
+      POSTGRES_USER: capital
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-capital-local-only}
+    mem_limit: 512m
+    cpus: 1.0
+    volumes:
+      - capital-data:/var/lib/postgresql/data
+      - ./db/001-init.sql:/docker-entrypoint-initdb.d/001-init.sql:ro
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U capital -d capital']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  verification:
+    <<: *java
+    environment:
+      <<: *java-environment
+      DEMO_ROLE: verification
+      APPDYNAMICS_AGENT_TIER_NAME: Verification
+
+  processor:
+    <<: *java
+    environment:
+      <<: *java-environment
+      DEMO_ROLE: processor
+      APPDYNAMICS_AGENT_TIER_NAME: Loan-Processing
+
+  portal:
+    <<: *java
+    environment:
+      <<: *java-environment
+      DEMO_ROLE: portal
+      APPDYNAMICS_AGENT_TIER_NAME: Portal
+    ports:
+      - '${DEMO_BIND_ADDRESS:-127.0.0.1}:${DEMO_PORT:-8088}:8080'
+    depends_on:
+      verification:
+        condition: service_healthy
+      processor:
+        condition: service_healthy
+
+  loadgen:
+    image: python:3.13-slim-bookworm
+    profiles: [load]
+    restart: on-failure
+    mem_limit: 128m
+    cpus: 0.5
+    command: [python, -u, /work/load.py]
+    environment:
+      TARGET_URL: http://portal:8080
+      LOAD_RPS: ${LOAD_RPS:-2}
+      LOAD_WORKERS: ${LOAD_WORKERS:-8}
+      LOAD_PATTERN: ${LOAD_PATTERN:-cycle}
+      LOAD_PHASE_SECONDS: ${LOAD_PHASE_SECONDS:-300}
+      LOAD_DURATION_SECONDS: ${LOAD_DURATION_SECONDS:-0}
+    volumes:
+      - ./scripts:/work:ro
+    depends_on:
+      portal:
+        condition: service_healthy
+
+  smoke:
+    image: python:3.13-slim-bookworm
+    profiles: [test]
+    command: [python, -u, /work/smoke.py]
+    environment:
+      TARGET_URL: http://portal:8080
+    volumes:
+      - ./scripts:/work:ro
+    depends_on:
+      portal:
+        condition: service_healthy
+
+volumes:
+  capital-data:
