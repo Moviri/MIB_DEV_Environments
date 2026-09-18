@@ -129,7 +129,7 @@ The Moviri AppDynamics connector's `MatchAndGap.java` maps calls to `TOTAL_EVENT
 | Node performance | `Overall Application Performance\|<tier>\|Individual Nodes\|<node>\|<metric>` |
 | Business transaction performance | `Business Transaction Performance\|Business Transactions\|<tier>\|<transaction>\|<metric>` |
 | JVM heap / threads | `Application Infrastructure Performance\|<tier>\|Individual Nodes\|<node>\|JVM\|...` |
-| Host CPU / memory / disk / network | Matching **Machine Agent**; see [Deployment guide](docs/deployment.md) |
+| Host CPU / memory / disk / network | One **Machine Agent on the Linux Docker host**, sharing the Java agents' host ID; see [host monitoring directions](docs/deployment.md#host-metrics-for-the-moviri-etl) |
 | Database server metrics | Separate **Database Agent/collector** and applicable entitlement; a JDBC backend alone does not provide these |
 
 1. Keep traffic running for at least 30–60 minutes and record the workload phase times from generator logs in UTC or align their elapsed times with the container start time.
@@ -163,6 +163,6 @@ Database data survives restarts and normal `down`. Initialization SQL runs only 
 - [Original AD-Capital](https://github.com/Appdynamics/AD-Capital): historical workflow inspiration; no original application code was copied.
 - [Java supported environments](https://help.splunk.com/en/appdynamics-on-premises/application-performance-monitoring/26.3.0/install-app-server-agents/java-agent/java-supported-environments): agent/JVM/framework compatibility. Validate the exact versions in your selected agent release.
 - [Java agent environment variables](https://help.splunk.com/en/appdynamics-saas/application-performance-monitoring/26.4.0/install-app-server-agents/java-agent/install-the-java-agent/install-the-java-agent-in-containers/use-a-dockerfile/set-the-java-agent-environment-variables).
-- [Machine Agent installation scenarios](https://help.splunk.com/appdynamics-saas/infrastructure-visibility/25.4.0/machine-agent/install-the-machine-agent/machine-agent-installation-scenarios).
+- [Machine Agent installation scenarios](https://help.splunk.com/en/appdynamics-saas/infrastructure-visibility/26.8.0/machine-agent/install-the-machine-agent/machine-agent-installation-scenarios).
 
 The application dependency is pinned in `pom.xml`; base image tags receive vendor updates. For an immutable lab baseline, record the pulled image digests or pin those digests before your next deployment. Rebuild and rerun the integration check when updating dependencies.

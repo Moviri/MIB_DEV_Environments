@@ -66,28 +66,73 @@ Then open `http://localhost:18088`. This also provides a secure browser context 
 
 ## Host metrics for the Moviri ETL
 
-Run one AppDynamics **Machine Agent on the host whose hardware you intend to measure** to obtain CPU, memory, disk and network data. Select an agent distribution supported on that host. Do not use a basic, isolated agent container as evidence of host hardware metrics: it can report its own namespace instead. For container visibility, use AppDynamics' documented Docker Visibility installation and its corresponding permissions/licensing.
+Run one AppDynamics **Machine Agent directly on the Linux host running Docker Engine** to collect that host's CPU, memory, disk and network metrics. If Docker Engine runs inside a Linux VM, run these steps inside that existing VM; the measurements describe the VM's resources. The three Java agents remain in their application containers.
 
-Configure the Machine Agent's Controller settings to match the Java agents, set the **same unique host ID** as the three JVMs on this host (`capital-lab-host-02` in this example), and leave application, tier, and node name unset for this host-level installation. According to the [installation scenarios](https://help.splunk.com/appdynamics-saas/infrastructure-visibility/25.4.0/machine-agent/install-the-machine-agent/machine-agent-installation-scenarios), matching IDs allow one Machine Agent to report hardware metrics for multiple app-agent nodes.
+The ETL can discover a compute host from Java-agent node metadata even when there are no hardware samples. All three demo JVMs share one host ID, so the same compute host can appear under each tier. One Machine Agent with that matching ID supplies the hardware data for those nodes; see the [installation scenarios](https://help.splunk.com/en/appdynamics-saas/infrastructure-visibility/26.8.0/machine-agent/install-the-machine-agent/machine-agent-installation-scenarios).
 
-An example foreground launch in a Unix shell after extracting a Machine Agent to `agents/machine`:
+### Install and start on the Linux Docker host
 
-```bash
-# Source only your own trusted .env file. It contains executable shell syntax.
-set -a
-. ./.env
-set +a
-unset APPDYNAMICS_AGENT_APPLICATION_NAME APPDYNAMICS_AGENT_TIER_NAME APPDYNAMICS_AGENT_NODE_NAME
-export APPDYNAMICS_SIM_ENABLED=false
-java -Dappdynamics.agent.uniqueHostId="$APPDYNAMICS_AGENT_UNIQUE_HOST_ID" \
-     -jar agents/machine/machineagent.jar
+Run the following commands from the repository's `AppDynamics/` directory **in a shell on the Linux Docker host**. Use its existing `.env`, already configured for the Java agents.
+
+1. Confirm the host ID used by the running application:
+
+   ```bash
+   docker compose exec -T portal printenv APPDYNAMICS_AGENT_UNIQUE_HOST_ID
+   ```
+
+   It should match `APPDYNAMICS_AGENT_UNIQUE_HOST_ID` in `.env` and in the other two Java services. Keep this ID when adding the Machine Agent to an existing deployment. Give separate Docker hosts separate IDs.
+
+2. Download the **Linux Machine Agent ZIP with bundled JRE** for the host's CPU architecture from AppDynamics Downloads. This is a separate distribution from the Java Agent ZIP. Follow the current [Linux ZIP installation instructions](https://help.splunk.com/en/appdynamics-saas/infrastructure-visibility/26.5.0/machine-agent/install-the-machine-agent/linux-install-using-zip-with-bundled-jre) and [supported environments](https://help.splunk.com/en/appdynamics-saas/infrastructure-visibility/26.8.0/machine-agent/machine-agent-requirements-and-supported-environments).
+
+   For a new installation, extract it into the empty agent directory, substituting the downloaded filename:
+
+   ```bash
+   mkdir -p agents/machine
+   unzip /path/to/MachineAgent.zip -d agents/machine
+   test -f agents/machine/machineagent.jar
+   test -x agents/machine/bin/machine-agent
+   ```
+
+   The account running the agent needs read/write access to this directory. The bundled launcher uses its included JRE; Java installed inside an application container is not a host Java installation. If a Machine Agent is already running on this host, configure that installation instead of starting a second one.
+
+3. In `agents/machine/conf/controller-info.xml`, leave `application-name`, `tier-name`, and `node-name` empty. Clear any values prefilled by a download wizard. This host-level agent will associate with existing application nodes using their shared host ID.
+
+4. Start it in the foreground using the Controller connection settings from `.env`:
+
+   ```bash
+   (
+       # Source only your own trusted, shell-compatible .env file.
+       # Sourcing it executes shell syntax; the configure-agent.py output is compatible.
+       set -a
+       . ./.env
+       set +a
+       unset APPDYNAMICS_AGENT_APPLICATION_NAME APPDYNAMICS_AGENT_TIER_NAME APPDYNAMICS_AGENT_NODE_NAME
+       export APPDYNAMICS_SIM_ENABLED=false
+       export APPDYNAMICS_DOCKER_ENABLED=false
+       agents/machine/bin/machine-agent \
+           -D appdynamics.agent.uniqueHostId="$APPDYNAMICS_AGENT_UNIQUE_HOST_ID" \
+           -D appdynamics.force.default.ssl.certificate.validation=true
+   )
+   ```
+
+The environment supplies the Controller hostname, port, TLS setting, account name, access key and shared host ID. The subshell keeps these settings local to this launch. `APPDYNAMICS_SIM_ENABLED=false` selects basic machine monitoring; enable Server Visibility or Docker Visibility separately only when needed and licensed. Review startup and connection messages in `agents/machine/logs/machine-agent.log`. Stop this foreground agent with Ctrl+C.
+
+For unattended operation, use the agent's supported Linux service installation or your host's service manager after verifying collection. Its service configuration must retain the same Controller/account settings, host ID and monitoring flags, with application/tier/node unset. A service does not inherit variables from this interactive shell. Keep the access key in a protected configuration file and run only one instance.
+
+### Verify collection before rerunning the ETL
+
+Allow several reporting intervals, then open **Capital-Lab** in the Controller Metric Browser. Under **Application Infrastructure Performance → a tier → Individual Nodes → its node → Hardware Resources**, check for timestamped CPU and memory samples. For example, the connector requests paths such as:
+
+```text
+Application Infrastructure Performance|Portal|Individual Nodes|<portal-node>|Hardware Resources|CPU|%Busy
+Application Infrastructure Performance|Portal|Individual Nodes|<portal-node>|Hardware Resources|Memory|Used %
 ```
 
-Use the agent's bundled Java executable if required by that distribution, and follow its current installation instructions. `APPDYNAMICS_SIM_ENABLED=false` keeps basic machine monitoring; enable Server Visibility only when included in the trial and needed. Persist the agent using your existing service management standard after validating metrics. Do not make up separate physical hosts for each container: they share one host's CPU and memory.
+Confirm hardware samples on the other two tiers' nodes as well. Then run the ETL for an interval containing samples collected **after** the Machine Agent started; older intervals remain empty. Basic monitoring is verified through the application's Hardware Resources paths. The separate Servers view and additional Server Visibility metrics depend on their configuration and entitlement.
 
-When Docker runs Linux containers inside a VM, distinguish the workstation's hardware from the VM's resources. For example, a Windows Machine Agent reports the Windows host; it does not describe the Linux VM's kernel or individual containers. Choose the deployment and Machine Agent placement to match the hardware data you need to validate.
+If the paths remain empty, check the Machine Agent log for connection, authentication or licensing errors, compare its host ID with the running Java agents, and confirm application/tier/node were left unset in both its environment and XML. If the Controller contains samples but the ETL does not, check the extraction interval, filters and API access against those same paths.
 
-Confirm hardware paths in the Controller Metric Browser and through the API before running the ETL. Server Visibility settings can change where machine metrics appear. Separate Database Agent/collector setup is needed for PostgreSQL server metrics; Java JDBC timing does not replace it.
+These are Linux **host** measurements, not per-container quotas or utilization. An isolated Machine Agent container can see different resource namespaces; use AppDynamics' [Docker Visibility setup](https://help.splunk.com/en/appdynamics-on-premises/infrastructure-visibility/26.4.0/monitor-containers-with-docker-visibility) when per-container measurements are required. Separate Database Agent/collector setup is needed for PostgreSQL server metrics; Java JDBC timing does not replace it.
 
 ## Migration checks
 
