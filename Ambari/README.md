@@ -17,6 +17,12 @@ docker compose up -d
 ```
 
 ## Run the Scripts
+If the public RPM repository is unavailable (for example, HTTP 522), see
+[Rebuilding the Rocky Linux 8 RPM repository](build/README.md). That workflow
+builds a local Ambari/Bigtop package bundle that the setup script can use
+without contacting the failing mirror. Read its validation status and Metrics
+limitation before building.
+
 If on windows:
 ```
 .\run.ps1
