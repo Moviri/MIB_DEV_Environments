@@ -65,6 +65,7 @@ case "$stage" in
         export JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk
         export PATH="$JAVA_HOME/bin:$PATH"
         cd /work/sources/bigtop-3.3.0
+        bash /opt/ambari-build/apply-bigtop-patches.sh "$PWD"
         targets=()
         for component in "${components[@]}"; do targets+=("$component-pkg"); done
         # Bigtop's dependency graph omits bigtop-select; always build it explicitly.

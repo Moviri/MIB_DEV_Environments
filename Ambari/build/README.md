@@ -5,10 +5,11 @@ components without using apache-ambari.com. It uses the Apache source archives,
 checks their pinned SHA-512 hashes, and runs in a digest-pinned Bigtop Rocky 8
 x86_64 build container. Java 17 is selected for Ambari and Java 8 for Bigtop.
 
-**Validation status:** the release checksums, builder-image manifest and build
-flags have been checked against upstream. Compilation and fresh-cluster
-installation still need to run on a host with sufficient storage. These scripts
-are a build starting point, not an already validated replacement RPM bundle.
+**Validation status:** the Ambari build reported `BUILD SUCCESS` on the AWS
+build host on 2026-11-17. Bigtop's Hadoop build subsequently failed during the
+Catalog frontend dependency installation. The compatibility fix below passed
+an isolated frontend install with Node 12.22.1 and Yarn 1.22.5; the complete
+Bigtop RPM build and fresh-cluster installation still need validation.
 
 ## Build host
 
@@ -45,6 +46,32 @@ selection is `bigtop-select hadoop zookeeper`. Hadoop supplies HDFS, YARN and
 MapReduce packages. Bigtop's build dependency graph adds its prerequisites.
 The build uses `-PparentDir=/usr/bigtop -PpkgSuffix`, which is required for
 Ambari's versioned package names and `/usr/bigtop/3.3.0` layout.
+
+### Retrying a Catalog frontend Node engine failure
+
+Hadoop 3.3.6's Application Catalog has no Yarn lockfile. Its `apidoc@0.17.7`
+dependency allows newer Winston logging dependencies: these can now pull in
+`color@5.0.3` (Node >=18) and `triple-beam@1.4.1` (Node >=14), while the
+frontend build uses Node 12.22.1. The error is reported as a failed Yarn install
+and then as a failed Hadoop RPM build.
+
+The builder applies `patch9999-ambari-catalog-node12.diff` through Bigtop's
+existing RPM patch mechanism. It pins the Catalog logging dependencies to
+`winston@3.3.3`, `@dabh/diagnostics@2.0.3`, and `triple-beam@1.3.0` using Yarn
+resolutions. Engine checks stay enabled, and the separate YARN UI is unchanged.
+This is a compatibility repair, not a full dependency lock or security update.
+
+After pulling the fix, retry only the Bigtop stage:
+
+```bash
+bash build-packages.sh bigtop
+```
+
+The changed patch invalidates only Hadoop's `.srpm` and `.rpm` completion
+markers. Bigtop recreates Hadoop's RPM build tree to apply the patch; Maven
+cache, source downloads, completed prerequisite packages and Ambari RPMs are
+preserved. Do not edit Hadoop's generated `target/package.json`: rpmbuild would
+replace it. After Bigtop succeeds, run the `repo` stage as usual.
 
 To build additional services, supply the same selection to `bigtop` and `repo`:
 
