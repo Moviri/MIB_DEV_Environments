@@ -1,6 +1,7 @@
 """Check retry safety for Bigtop's cached source and binary RPM builds."""
 
 from pathlib import Path
+import json
 import shutil
 import subprocess
 import tempfile
@@ -9,6 +10,10 @@ import unittest
 
 BUILD = Path(__file__).resolve().parent
 PATCH = "patch9999-ambari-catalog-node12.diff"
+CATALOG = Path(
+    "hadoop-yarn-project/hadoop-yarn/hadoop-yarn-applications/"
+    "hadoop-yarn-applications-catalog/hadoop-yarn-applications-catalog-webapp/package.json"
+)
 
 
 class BigtopPatchTests(unittest.TestCase):
@@ -57,6 +62,32 @@ class BigtopPatchTests(unittest.TestCase):
         self.assertEqual(
             (self.packaging / PATCH).read_bytes(), (BUILD / "patches" / PATCH).read_bytes()
         )
+
+    def test_catalog_patch_applies_after_bigtop_triple_beam_patch(self):
+        package = self.root / CATALOG
+        package.parent.mkdir(parents=True)
+        shutil.copyfile(BUILD / "fixtures/hadoop-3.3.6-catalog-package.json", package)
+        self.run_helper()
+        # Match Bigtop's order: its bundled patch adds resolutions first.
+        for patch in (BUILD / "fixtures/patch8-YARN-11528-triple-beam.diff",
+                      self.packaging / PATCH):
+            result = subprocess.run(
+                ["patch", "--batch", "--fuzz=0", "-p1", "-i", str(patch)],
+                cwd=self.root, capture_output=True, text=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+        def unique_keys(pairs):
+            keys = [key for key, _ in pairs]
+            self.assertEqual(len(keys), len(set(keys)), "Duplicate JSON keys")
+            return dict(pairs)
+
+        actual = json.loads(package.read_text(), object_pairs_hook=unique_keys)
+        self.assertEqual(actual.pop("resolutions"), {
+            "winston": "3.3.3", "@dabh/diagnostics": "2.0.3", "triple-beam": "1.3.0",
+        })
+        original = json.loads((BUILD / "fixtures/hadoop-3.3.6-catalog-package.json").read_text())
+        self.assertEqual(actual, original)
 
 
 if __name__ == "__main__":

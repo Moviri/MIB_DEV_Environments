@@ -51,15 +51,20 @@ Ambari's versioned package names and `/usr/bigtop/3.3.0` layout.
 
 Hadoop 3.3.6's Application Catalog has no Yarn lockfile. Its `apidoc@0.17.7`
 dependency allows newer Winston logging dependencies: these can now pull in
-`color@5.0.3` (Node >=18) and `triple-beam@1.4.1` (Node >=14), while the
-frontend build uses Node 12.22.1. The error is reported as a failed Yarn install
+`color@5.0.3` (Node >=18), while the frontend build uses Node 12.22.1.
+The error is reported as a failed Yarn install
 and then as a failed Hadoop RPM build.
 
 The builder applies `patch9999-ambari-catalog-node12.diff` through Bigtop's
-existing RPM patch mechanism. It pins the Catalog logging dependencies to
-`winston@3.3.3`, `@dabh/diagnostics@2.0.3`, and `triple-beam@1.3.0` using Yarn
-resolutions. Engine checks stay enabled, and the separate YARN UI is unchanged.
+existing RPM patch mechanism, after its bundled
+`patch8-YARN-11528-triple-beam.diff`. It adds `winston@3.3.3` and
+`@dabh/diagnostics@2.0.3` to the existing Yarn resolutions while preserving
+Bigtop's `triple-beam@1.3.0` pin. Engine checks stay enabled, and the separate
+YARN UI is unchanged. A regression test applies both patches in this order.
 This is a compatibility repair, not a full dependency lock or security update.
+
+This also recovers from `Hunk #1 FAILED` in an earlier version of the Catalog
+patch, which incorrectly expected a manifest without Bigtop's resolutions.
 
 After pulling the fix, retry only the Bigtop stage:
 
