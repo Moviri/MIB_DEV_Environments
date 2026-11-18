@@ -18,11 +18,19 @@ yum -y install https://dev.mysql.com/get/mysql80-community-release-el8-1.noarch.
 
 yum -y install mysql-server
 
+# MySQL's service runs as mysql and checks that its log is writable before
+# starting. Repair logs created by earlier root-run initialization attempts,
+# retaining the temporary root password needed below.
+install -d -o mysql -g mysql -m 750 /var/log/mysql
+if [ -f /var/log/mysql/mysqld.log ]; then
+    chown mysql:mysql /var/log/mysql/mysqld.log
+fi
+
 # Check if MySQL data directory is already initialized
 if [ ! -d "/var/lib/mysql/mysql" ]; then
     echo "Initializing MySQL data directory"
     rm -rf /var/lib/mysql/*
-    mysqld --initialize
+    mysqld --initialize --user=mysql
     chown -R mysql:mysql /var/lib/mysql
 else
     echo "MySQL data directory already exists, skipping initialization"

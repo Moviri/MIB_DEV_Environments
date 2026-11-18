@@ -5,11 +5,11 @@ components without using apache-ambari.com. It uses the Apache source archives,
 checks their pinned SHA-512 hashes, and runs in a digest-pinned Bigtop Rocky 8
 x86_64 build container. Java 17 is selected for Ambari and Java 8 for Bigtop.
 
-**Validation status:** the Ambari build reported `BUILD SUCCESS` on the AWS
-build host on 2026-11-17. Bigtop's Hadoop build subsequently failed during the
-Catalog frontend dependency installation. The compatibility fix below passed
-an isolated frontend install with Node 12.22.1 and Yarn 1.22.5; the complete
-Bigtop RPM build and fresh-cluster installation still need validation.
+**Validation status:** the AWS host reported successful Ambari and Bigtop
+builds and finalized a local repository containing 46 RPMs. Fresh installation
+then reached MySQL startup, where a root-owned log blocked the service.
+The setup script now initializes as `mysql` and repairs existing log ownership;
+the startup retry and complete cluster installation still need validation.
 
 ## Build host
 
