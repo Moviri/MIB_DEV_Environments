@@ -74,6 +74,8 @@ case "$stage" in
         export PATH="$JAVA_HOME/bin:$PATH"
         cd /work/sources/bigtop-3.3.0
         bash /opt/ambari-build/apply-bigtop-patches.sh "$PWD"
+        python3 /opt/ambari-build/prepare-bigtop-select.py \
+            bigtop-packages/src/common/bigtop-select/distro-select --build-root "$PWD"
         targets=()
         for component in "${components[@]}"; do targets+=("$component-pkg"); done
         # Bigtop's dependency graph omits bigtop-select; always build it explicitly.

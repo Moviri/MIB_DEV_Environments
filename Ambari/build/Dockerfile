@@ -7,6 +7,7 @@ RUN dnf install -y java-17-openjdk-devel python3-devel createrepo_c curl \
 
 COPY container-build.sh /opt/ambari-build/container-build.sh
 COPY apply-bigtop-patches.sh /opt/ambari-build/apply-bigtop-patches.sh
+COPY prepare-bigtop-select.py /opt/ambari-build/prepare-bigtop-select.py
 COPY patches/ /opt/ambari-build/patches/
 WORKDIR /work
 ENTRYPOINT ["/bin/bash", "/opt/ambari-build/container-build.sh"]

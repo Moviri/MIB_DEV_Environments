@@ -16,3 +16,8 @@ package, database, network, and server commands.
 the Apache 2.0 licensed [Ambari 3.0.0 agent launcher](https://github.com/apache/ambari/blob/release-3.0.0/ambari-agent/conf/unix/ambari-agent).
 Agent tests reproduce the unresolved hash and exercise startup decisions for
 running, stopped, stale-PID and unexpected-error status codes.
+
+`bigtop-3.3.0-distro-select.py` is the unmodified Apache 2.0 licensed
+[Bigtop 3.3.0 selector](https://github.com/apache/bigtop/blob/d44a5845eeffe6bab7037a3ca816cf3c9df44029/bigtop-packages/src/common/bigtop-select/distro-select).
+Tests reproduce its Python 3 syntax failure, apply the conversion, and exercise
+package queries and version-selection symlinks within a temporary filesystem.

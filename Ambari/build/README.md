@@ -8,10 +8,11 @@ x86_64 build container. Java 17 is selected for Ambari and Java 8 for Bigtop.
 **Validation status:** the AWS host reported successful Ambari and Bigtop
 builds and finalized a local repository containing 46 RPMs. Fresh installation
 then successfully started MySQL and imported the Ambari schema after correcting
-log ownership. Installation progressed past the server launcher repair to agent
-setup, which encountered the same unresolved `${buildNumber}` placeholder.
-Both launcher repairs and agent status handling pass local tests; agent startup,
-registration and full cluster validation remain pending.
+log ownership. Installation progressed through launcher repairs to Hadoop
+installation, where all four hosts reported Python 2 syntax in `distro-select`
+when invoked by Ambari's Python 3 wrapper. The selector conversion passes local
+query and version-selection tests; the remote retry and full cluster validation
+remain pending.
 
 ## Build host
 
@@ -180,6 +181,33 @@ launcher as `/var/lib/ambari-agent/bin/ambari-agent.before-buildnumber-fix`.
 The installer uses status exit codes to restart running agents and start stopped
 or stale-PID agents. Unexpected status failures stop the script. Server setup,
 database import and package builds do not need to be repeated for this recovery.
+
+### Repair the Bigtop selector during service installation
+
+Bigtop 3.3.0's `distro-select` uses Python 2 octal syntax and sortable dictionary
+key lists. Ambari 3 invokes it through `ambari-python-wrap` under Python 3,
+causing `SyntaxError` at `os.mkdir(current, 0755)` and the generic Ambari error
+`Unable to query for supported packages`.
+
+After that failure, pull the fix and run from `Ambari/`:
+
+```bash
+git pull --ff-only
+bash scripts/repair-bigtop-select.sh
+```
+
+The repair checks the selector against the pinned upstream contents, converts
+the octal constant and dictionary views, preserves a `.before-python3-fix`
+backup, and verifies `packages` and `versions` through Ambari's own wrapper on
+all four hosts. Unknown modified selectors are rejected. Retry the failed
+service installation in Ambari after every host passes these checks. This does
+not require a Hadoop rebuild, database setup, or a system Python change.
+
+Future Bigtop builds apply the same conversion before packaging and invalidate
+only `bigtop-select`'s `.srpm` and `.rpm` markers when its source changes.
+The installed-file repair does not change the existing RPM bundle: reinstalling
+that old RPM may require the repair again. A new build and repository
+finalization are needed to produce a bundle containing the corrected selector.
 
 Use a **fresh cluster** for validation. The existing server setup imports the
 Ambari database schema and is not a general-purpose upgrade/recovery script.
