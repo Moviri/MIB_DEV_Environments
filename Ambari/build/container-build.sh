@@ -60,6 +60,8 @@ case "$stage" in
         # Exercise the filtered launcher before publishing RPMs to the bundle.
         env -u buildNumber -u ambariFullVersion bash ambari-server/target/ambari-server --version
         env -u buildNumber -u ambariFullVersion bash ambari-server/target/ambari-server --hash
+        env -u buildNumber -u ambariVersion bash ambari-agent/target/src/ambari-agent --version
+        env -u buildNumber -u ambariVersion bash ambari-agent/target/src/ambari-agent --hash
         copy_rpms ambari-server/target/rpm/ambari-server/RPMS ambari
         copy_rpms ambari-agent/target/rpm/ambari-agent/RPMS ambari
         ;;

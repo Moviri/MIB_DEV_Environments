@@ -11,3 +11,8 @@ checks that patching succeeds with zero fuzz, and rejects duplicate JSON keys.
 dispatch from the Apache 2.0 licensed [Ambari 3.0.0 launcher](https://github.com/apache/ambari/blob/release-3.0.0/ambari-server/sbin/ambari-server).
 Configuration tests use its actual unset-variable behavior while stubbing
 package, database, network, and server commands.
+
+`ambari-agent-launcher-header.sh` contains the equivalent early dispatch from
+the Apache 2.0 licensed [Ambari 3.0.0 agent launcher](https://github.com/apache/ambari/blob/release-3.0.0/ambari-agent/conf/unix/ambari-agent).
+Agent tests reproduce the unresolved hash and exercise startup decisions for
+running, stopped, stale-PID and unexpected-error status codes.

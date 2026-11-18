@@ -8,9 +8,10 @@ x86_64 build container. Java 17 is selected for Ambari and Java 8 for Bigtop.
 **Validation status:** the AWS host reported successful Ambari and Bigtop
 builds and finalized a local repository containing 46 RPMs. Fresh installation
 then successfully started MySQL and imported the Ambari schema after correcting
-log ownership. The next blocker was an unresolved `${buildNumber}` in the
-installed server launcher. The launcher repair and configuration-only resume
-path pass local tests; server startup and full cluster validation remain pending.
+log ownership. Installation progressed past the server launcher repair to agent
+setup, which encountered the same unresolved `${buildNumber}` placeholder.
+Both launcher repairs and agent status handling pass local tests; agent startup,
+registration and full cluster validation remain pending.
 
 ## Build host
 
@@ -159,9 +160,26 @@ Ambari `3.0.0.0-0` launcher placeholder, preserving the original launcher as
 for this recovery; the installed file changes, while the RPM bundle stays intact.
 
 Future archive builds pass `-DbuildNumber=source-archive-3.0.0` to Maven and
-check the generated launcher's `--version` and `--hash` before copying RPMs.
+check both generated launchers' `--version` and `--hash` before copying RPMs.
 The identifier explicitly denotes a source archive, not a Git commit hash.
 Existing RPM bundles still need the installation-time repair unless rebuilt.
+
+### Resume an agent launcher failure
+
+If agent installation stops at `/var/lib/ambari-agent/bin/ambari-agent` with
+`buildNumber: unbound variable`, pull the fix and retry only the agent stage
+from `Ambari/`:
+
+```bash
+git pull --ff-only
+(cd scripts && bash install-ambari-agent.sh)
+```
+
+This applies the same guarded repair on all four hosts, preserving each original
+launcher as `/var/lib/ambari-agent/bin/ambari-agent.before-buildnumber-fix`.
+The installer uses status exit codes to restart running agents and start stopped
+or stale-PID agents. Unexpected status failures stop the script. Server setup,
+database import and package builds do not need to be repeated for this recovery.
 
 Use a **fresh cluster** for validation. The existing server setup imports the
 Ambari database schema and is not a general-purpose upgrade/recovery script.
