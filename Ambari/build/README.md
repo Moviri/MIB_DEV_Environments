@@ -7,9 +7,10 @@ x86_64 build container. Java 17 is selected for Ambari and Java 8 for Bigtop.
 
 **Validation status:** the AWS host reported successful Ambari and Bigtop
 builds and finalized a local repository containing 46 RPMs. Fresh installation
-then reached MySQL startup, where a root-owned log blocked the service.
-The setup script now initializes as `mysql` and repairs existing log ownership;
-the startup retry and complete cluster installation still need validation.
+then successfully started MySQL and imported the Ambari schema after correcting
+log ownership. The next blocker was an unresolved `${buildNumber}` in the
+installed server launcher. The launcher repair and configuration-only resume
+path pass local tests; server startup and full cluster validation remain pending.
 
 ## Build host
 
@@ -135,6 +136,32 @@ bash run.sh
 both apache-ambari.com downloads. The same behavior applies to the PowerShell
 launcher because it invokes the same container script. No manifest means the
 original remote-download path is used.
+
+### Resume after a successful database schema import
+
+If installation imported the Ambari schema but stopped with
+`/usr/sbin/ambari-server: line 34: buildNumber: unbound variable`, pull the fix
+and run from `Ambari/`:
+
+```bash
+git pull --ff-only
+(
+  cd scripts &&
+  bash install-ambari-server.sh --configure-only &&
+  bash install-ambari-agent.sh
+)
+```
+
+This resumes JDBC registration, server configuration and startup without
+recreating databases or importing the schema again. It repairs only the known
+Ambari `3.0.0.0-0` launcher placeholder, preserving the original launcher as
+`/usr/sbin/ambari-server.before-buildnumber-fix`. No RPM rebuild is required
+for this recovery; the installed file changes, while the RPM bundle stays intact.
+
+Future archive builds pass `-DbuildNumber=source-archive-3.0.0` to Maven and
+check the generated launcher's `--version` and `--hash` before copying RPMs.
+The identifier explicitly denotes a source archive, not a Git commit hash.
+Existing RPM bundles still need the installation-time repair unless rebuilt.
 
 Use a **fresh cluster** for validation. The existing server setup imports the
 Ambari database schema and is not a general-purpose upgrade/recovery script.

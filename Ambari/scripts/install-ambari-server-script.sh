@@ -2,6 +2,16 @@
 
 set -ex
 
+script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+case "${1:-}" in
+    --configure-only)
+        # Resume after a successful schema import without replaying SQL.
+        exec /bin/bash "$script_dir/configure-ambari-server-script.sh"
+        ;;
+    "") ;;
+    *) echo "Usage: $0 [--configure-only]" >&2; exit 2 ;;
+esac
+
 # ambari agent
 yum install -y python3-distro
 yum install -y java-17-openjdk-devel
@@ -101,25 +111,5 @@ fi
 
 mysql --connect-expired-password -uambari -pambari ambari < /var/lib/ambari-server/resources/Ambari-DDL-MySQL-CREATE.sql
 
-# setup Ambari MySQL
-
-wget https://repo1.maven.org/maven2/mysql/mysql-connector-java/8.0.28/mysql-connector-java-8.0.28.jar \
-  -O /usr/share/java/mysql-connector-java.jar
-
-ambari-server setup --jdbc-db=mysql --jdbc-driver=/usr/share/java/mysql-connector-java.jar
-
-echo "server.jdbc.url=jdbc:mysql://localhost:3306/ambari?useSSL=true&verifyServerCertificate=false&enabledTLSProtocols=TLSv1.2" >> /etc/ambari-server/conf/ambari.properties
-
-ambari-server setup -s \
-  -j /usr/lib/jvm/java-1.8.0-openjdk \
-  --ambari-java-home /usr/lib/jvm/java-17-openjdk \
-  --database=mysql \
-  --databasehost=localhost \
-  --databaseport=3306 \
-  --databasename=ambari \
-  --databaseusername=ambari \
-  --databasepassword=ambari
-
-
-ambari-server start
+bash "$script_dir/configure-ambari-server-script.sh"
 

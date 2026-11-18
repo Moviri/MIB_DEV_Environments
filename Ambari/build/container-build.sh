@@ -51,9 +51,15 @@ case "$stage" in
         export JAVA_HOME=/usr/lib/jvm/java-17-openjdk
         export PATH="$JAVA_HOME/bin:$PATH"
         cd /work/sources/ambari-3.0.0
+        # Source archives have no Git metadata for buildnumber-maven-plugin.
+        # Use an explicit archive identifier; this is not an SCM commit hash.
         mvn --batch-mode -T "${BUILD_JOBS:-2}" clean install package rpm:rpm \
-            -Drevision=3.0.0.0.0 -DskipTests -Dmaven.test.skip=true \
+            -Drevision=3.0.0.0.0 -DbuildNumber=source-archive-3.0.0 \
+            -DskipTests -Dmaven.test.skip=true \
             -DskipPythonTests -Drat.skip=true -Dfindbugs.skip=true -Dcheckstyle.skip=true
+        # Exercise the filtered launcher before publishing RPMs to the bundle.
+        env -u buildNumber -u ambariFullVersion bash ambari-server/target/ambari-server --version
+        env -u buildNumber -u ambariFullVersion bash ambari-server/target/ambari-server --hash
         copy_rpms ambari-server/target/rpm/ambari-server/RPMS ambari
         copy_rpms ambari-agent/target/rpm/ambari-agent/RPMS ambari
         ;;

@@ -6,3 +6,8 @@ network access. Both originate from Apache projects licensed under Apache 2.0.
 
 The regression test applies the bundled Bigtop patch before the local patch,
 checks that patching succeeds with zero fuzz, and rejects duplicate JSON keys.
+
+`ambari-server-launcher-header.sh` is the header and early `--version`/`--hash`
+dispatch from the Apache 2.0 licensed [Ambari 3.0.0 launcher](https://github.com/apache/ambari/blob/release-3.0.0/ambari-server/sbin/ambari-server).
+Configuration tests use its actual unset-variable behavior while stubbing
+package, database, network, and server commands.
