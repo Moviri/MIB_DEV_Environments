@@ -17,6 +17,7 @@ install_patch() {
 }
 
 install_patch hadoop patch9999-ambari-catalog-node12.diff
+install_patch hadoop patch9999-ambari-glassfish-el.diff
 install_patch ranger patch9999-ambari-kylin-linq4j.diff
 install_patch ranger patch9999-ambari-ranger-distro-assembly.diff
 

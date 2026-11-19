@@ -1,0 +1,12 @@
+--- a/hadoop-project/pom.xml
++++ b/hadoop-project/pom.xml
+@@ -860,4 +860,9 @@
+         <artifactId>jsp-api</artifactId>
+         <version>2.1</version>
++      </dependency>
++      <dependency>
++        <groupId>org.glassfish</groupId>
++        <artifactId>javax.el</artifactId>
++        <version>3.0.1-b12</version>
+       </dependency>
+       <dependency>

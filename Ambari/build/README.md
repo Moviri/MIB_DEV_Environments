@@ -94,6 +94,19 @@ script. Include every service that will be selected in Ambari's installation
 wizard. The `repo` stage checks package presence, not dependency closure or
 service runtime compatibility.
 
+### Resume a Hadoop Timeline Service dependency failure
+
+If `:hadoop-rpm` stops with `No versions are present ... [3.0.0,)` for
+`org.glassfish:javax.el`, the two Timeline Service HBase modules inherit that
+range through HBase 2.0.2 and GlassFish JSP 2.3.2. The Hadoop packaging patch
+pins the EL implementation to `3.0.1-b12` so Maven can fetch the exact artifact
+without looking up a list of available versions.
+
+From the existing `Ambari/` checkout, run `git pull --ff-only` and retry
+`bash build-packages.sh bigtop`. Keep the work directory and the RPMs from
+the completed Ambari stage. Once Bigtop succeeds, continue the fresh profile
+with `bash build-packages.sh metrics && bash build-packages.sh repo`.
+
 ### Extend an existing 46-RPM bundle
 
 From `Ambari/`, keep the previous build's work and output directories so the

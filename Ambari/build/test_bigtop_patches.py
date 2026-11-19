@@ -10,6 +10,7 @@ import unittest
 
 BUILD = Path(__file__).resolve().parent
 PATCH = "patch9999-ambari-catalog-node12.diff"
+EL_PATCH = "patch9999-ambari-glassfish-el.diff"
 CATALOG = Path(
     "hadoop-yarn-project/hadoop-yarn/hadoop-yarn-applications/"
     "hadoop-yarn-applications-catalog/hadoop-yarn-applications-catalog-webapp/package.json"
@@ -55,6 +56,7 @@ class BigtopPatchTests(unittest.TestCase):
 
     def test_same_patch_preserves_completed_build(self):
         shutil.copyfile(BUILD / "patches" / PATCH, self.packaging / PATCH)
+        shutil.copyfile(BUILD / "patches" / EL_PATCH, self.packaging / EL_PATCH)
         self.run_helper()
         for path in self.markers:
             self.assertEqual(path.read_text(), "existing build data")
@@ -69,6 +71,7 @@ class BigtopPatchTests(unittest.TestCase):
 
     def test_ranger_patch_invalidates_only_ranger_on_retry(self):
         shutil.copyfile(BUILD / "patches" / PATCH, self.packaging / PATCH)
+        shutil.copyfile(BUILD / "patches" / EL_PATCH, self.packaging / EL_PATCH)
         # A build with the earlier Kylin fix still needs the new assembly input.
         kylin = "patch9999-ambari-kylin-linq4j.diff"
         shutil.copyfile(BUILD / "patches" / kylin, self.ranger_packaging / kylin)
@@ -87,6 +90,13 @@ class BigtopPatchTests(unittest.TestCase):
             marker.touch()
         self.run_helper()
         self.assertTrue(all(marker.exists() for marker in ranger_markers))
+
+    def test_new_el_pin_rebuilds_hadoop_with_existing_catalog_patch(self):
+        shutil.copyfile(BUILD / "patches" / PATCH, self.packaging / PATCH)
+        self.run_helper()
+        self.assertEqual((self.packaging / EL_PATCH).read_bytes(),
+                         (BUILD / "patches" / EL_PATCH).read_bytes())
+        self.assertTrue(all(not marker.exists() for marker in self.markers))
 
     def test_catalog_patch_applies_after_bigtop_triple_beam_patch(self):
         package = self.root / CATALOG
