@@ -4,6 +4,7 @@ This workflow builds Ambari 3.0.0 server/agent and selected Bigtop 3.3.0
 components without using apache-ambari.com. It uses the Apache source archives,
 checks their pinned SHA-512 hashes, and runs in a digest-pinned Bigtop Rocky 8
 x86_64 build container. Java 17 is selected for Ambari and Java 8 for Bigtop.
+The optional Metrics stage uses its own Rocky 8 image and JDK 8.
 
 **Validation status:** the AWS host reported successful Ambari and Bigtop
 builds and finalized a local repository containing 46 RPMs. Fresh installation
@@ -13,8 +14,9 @@ installation, where all four hosts reported Python 2 syntax in `distro-select`
 when invoked by Ambari's Python 3 wrapper. The selector conversion passes local
 query and version-selection tests. On retry the agents reported version 3.3.0.
 The Timeline Service V2 install then stopped because the original bundle lacked
-`ranger_3_3_0-yarn-plugin`. Building and installing the expanded bundle on AWS
-remains to be verified.
+`ranger_3_3_0-yarn-plugin`. AWS subsequently built the expanded 70-RPM bundle and
+all four nodes resolved the Ranger plugins and HBase. Grafana installation then requested the
+separately packaged Metrics monitor.
 
 ## Build host
 
@@ -147,7 +149,7 @@ Defaults are relative to `Ambari/`, even if the command runs elsewhere:
 - `.package-build/sources/`: extracted sources and compiler output.
 - `.package-build/cache/`: Maven, Gradle and npm caches.
 - `.package-build/logs/`: timestamped logs, including failed builds.
-- `ambari-repo/ambari/` and `ambari-repo/bigtop/`: binary RPMs.
+- `ambari-repo/{ambari,bigtop}/` and optional `ambari-repo/metrics/` contain the binary RPMs.
 
 The builder runs as root; generated files may require `sudo` to manage on the
 host. Re-running a failed stage preserves dependency caches. Ambari runs Maven
@@ -156,8 +158,7 @@ or flags, use a new work/output directory to avoid reusing stale packages.
 
 An archive hash mismatch is fatal. Inspect the download before removing its
 `.part` file and retrying; the workflow never extracts an unchecked archive.
-The hashes are pinned to the checksum files published alongside the two
-Apache release archives. Transitive Maven/npm inputs are not fully locked.
+The Ambari and Bigtop release hashes come from their published checksum files. Transitive Maven/npm inputs are not fully locked.
 
 After both build stages succeed, `repo` generates metadata, `RPM-INVENTORY.tsv`,
 `SOURCE-SHA512SUMS`, `BUILDER-IMAGE.txt`, `BIGTOP-COMPONENTS.txt`, and
@@ -261,18 +262,42 @@ their service checks, and verify an HDFS read/write and a YARN job. Save the
 RPM bundle once this succeeds. Package compilation alone does not prove a
 working deployment, and the build commands skip upstream test suites.
 
-## Ambari Metrics requires a separate compatibility decision
+## Add Python 3 Ambari Metrics to an existing repository
 
-The archived **Ambari Metrics 3.0.0** release contains Python 2 monitor code
-(for example, Python 2 `print` statements in `src/main/python/main.py`). This
-environment sets `/usr/bin/python` to Python 3. Therefore these scripts do not
-build Metrics or claim to reproduce the original mirror's Metrics binaries.
-Leave Ambari Metrics unselected during the initial core-cluster validation.
+From `Ambari/` on the build host, keep the same work and output directories
+used for the core bundle. For the running Compose cluster the output is normally
+`./ambari-repo`, mounted at `/var/repo/ambari`. Wait for each command to succeed.
 
-To restore monitoring, identify and pin a Python 3-compatible Metrics revision,
-validate its embedded HBase/Hadoop/Phoenix dependencies, and build/test the
-collector, monitor, sink and Grafana packages separately. Do not substitute the
-older release just because its version number also reads 3.0.0.
+```bash
+git pull --ff-only &&
+bash build-packages.sh metrics &&
+bash build-packages.sh repo &&
+bash scripts/verify-metrics-repo.sh
+```
+
+The Metrics stage builds only the monitor, collector, Hadoop sink and Grafana.
+It uses a separate x86_64 Rocky 8 builder with JDK 8 and a Python 3 development
+environment. The existing Bigtop and Ambari RPMs stay in their directories.
+After a successful build, `repo` includes `metrics/` in the RPM inventory,
+repodata and checksum manifest and requires all four package names. If the core
+bundle used extra Bigtop components, pass their full selection to `repo` as before.
+
+The verification command refreshes `BIGTOP-3.3.0-repo-1` on each node. Pass the
+repo ID from the Ambari task log as its argument if different. Once all checks
+pass, keep **Ambari Metrics** selected, deploy or retry in the existing wizard,
+then run the Ambari Metrics service check and confirm Grafana shows recent data.
+
+The source is Apache Metrics [revision b1ac7d78](https://github.com/apache/ambari-metrics/tree/b1ac7d78d73818ae896bff279ef7d3f27ef76741).
+Its Maven version is 3.1.0-SNAPSHOT and it contains the upstream Python 3
+monitor port. Ambari's 3.0.0 service definition installs these RPMs by name.
+SHA-512 pins cover the source archive and the upstream assembly's embedded
+HBase 2.4.13, Hadoop 3.3.4, Phoenix 5.1.2 and Grafana 11.5.2 archives.
+The collector has its own library versions. Cluster HBase and Hadoop continue to
+use their Bigtop packages. The build caches the archives in
+`.package-build/downloads/` and verifies the packaged monitor on Rocky 8
+before copying the four RPMs. A local x86_64 Rocky 8 build produced all four
+`3.1.0-1.x86_64` RPMs (746 MiB combined). Cluster service startup still
+requires a live check.
 
 ## Upstream references
 

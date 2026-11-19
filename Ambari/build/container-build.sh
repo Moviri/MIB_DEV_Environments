@@ -1,15 +1,17 @@
 #!/bin/bash
 set -eo pipefail
 # The upstream toolchain profile may reference unset optional variables.
-source /etc/profile.d/bigtop.sh
+if [[ ${1:-} != metrics ]]; then
+    source /etc/profile.d/bigtop.sh
+fi
 set -u
 stage=${1:?Missing stage}
 shift
 components=("$@")
 mkdir -p /work/downloads /work/sources
 
-fetch_source() {
-    local name=$1 url=$2 destination=$3 expected actual
+fetch_archive() {
+    local name=$1 url=$2 expected actual
     expected=$(awk -v name="$name" '$2 == name {print $1}' /work/sources.sha512)
     [[ ${#expected} -eq 128 ]] || { echo "Missing pinned checksum for $name" >&2; exit 1; }
     if [[ ! -f "/work/downloads/$name" ]]; then
@@ -22,6 +24,11 @@ fetch_source() {
     fi
     actual=$(sha512sum "/work/downloads/$name" | awk '{print $1}')
     [[ "$actual" == "$expected" ]] || { echo "Checksum mismatch: $name" >&2; exit 1; }
+}
+
+fetch_source() {
+    local name=$1 url=$2 destination=$3
+    fetch_archive "$name" "$url"
     if [[ ! -d "$destination" ]]; then
         mkdir -p "$destination.extracting"
         tar -xzf "/work/downloads/$name" --strip-components=1 -C "$destination.extracting"
@@ -65,6 +72,9 @@ case "$stage" in
         copy_rpms ambari-server/target/rpm/ambari-server/RPMS ambari
         copy_rpms ambari-agent/target/rpm/ambari-agent/RPMS ambari
         ;;
+    metrics)
+        source /opt/ambari-build/build-metrics.sh
+        ;;
     bigtop)
         rm -f /repo/LOCAL_RPMS.sha256
         fetch_source bigtop-3.3.0-project.tar.gz \
@@ -87,11 +97,13 @@ case "$stage" in
     repo)
         rm -f /repo/LOCAL_RPMS.sha256
         cd /repo
+        groups=(ambari bigtop)
+        if [[ -d metrics ]]; then groups+=(metrics); fi
         inventory=$(mktemp)
         trap 'rm -f "$inventory"' EXIT
         while IFS= read -r -d '' file; do
             rpm -qp --qf '%{NAME}\t%{VERSION}\t%{RELEASE}\t%{ARCH}\n' "$file" >> "$inventory"
-        done < <(find ambari bigtop -type f -name '*.rpm' ! -name '*.src.rpm' -print0)
+        done < <(find "${groups[@]}" -type f -name '*.rpm' ! -name '*.src.rpm' -print0)
         require_package() {
             local name=$1
             awk -F '\t' -v name="$name" '$1 == name {found=1} END {exit !found}' "$inventory" || {
@@ -100,6 +112,11 @@ case "$stage" in
         }
         require_package ambari-server
         require_package ambari-agent
+        if [[ -d metrics ]]; then
+            for suffix in monitor collector hadoop-sink grafana; do
+                require_package "ambari-metrics-$suffix"
+            done
+        fi
         require_package bigtop-select
         for component in "${components[@]}"; do
             case "$component" in
@@ -118,7 +135,7 @@ case "$stage" in
         cp /work/builder-image-id.txt BUILDER-IMAGE.txt
         printf '%s\n' "${components[@]}" > BIGTOP-COMPONENTS.txt
         createrepo_c .
-        find ambari bigtop -type f -name '*.rpm' ! -name '*.src.rpm' -print0 \
+        find "${groups[@]}" -type f -name '*.rpm' ! -name '*.src.rpm' -print0 \
             | sort -z | xargs -0 -r sha256sum > LOCAL_RPMS.sha256.tmp
         [[ -s LOCAL_RPMS.sha256.tmp ]] || { echo "Empty RPM repository" >&2; exit 1; }
         mv LOCAL_RPMS.sha256.tmp LOCAL_RPMS.sha256

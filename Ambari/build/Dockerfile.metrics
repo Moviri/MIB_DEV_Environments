@@ -1,0 +1,8 @@
+FROM rockylinux/rockylinux:8@sha256:e8a49c5403b687db05d4d67333fa45808fbe74f36e683cec7abb1f7d0f2338c6
+RUN dnf -y module enable maven:3.8 && \
+    dnf -y install maven java-1.8.0-openjdk-devel rpm-build gcc make \
+        python3-devel python3-setuptools python3-distro curl cpio tar gzip && dnf clean all
+ENV JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk
+ENV PATH="${JAVA_HOME}/bin:${PATH}"
+COPY container-build.sh build-metrics.sh /opt/ambari-build/
+ENTRYPOINT ["/bin/bash", "/opt/ambari-build/container-build.sh"]

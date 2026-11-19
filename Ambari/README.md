@@ -20,8 +20,7 @@ docker compose up -d
 If the public RPM repository is unavailable (for example, HTTP 522), see
 [Rebuilding the Rocky Linux 8 RPM repository](build/README.md). That workflow
 builds a local Ambari/Bigtop package bundle that the setup script can use
-without contacting the failing mirror. Read its validation status and Metrics
-limitation before building.
+without contacting the failing mirror. To include monitoring, follow [Add Python 3 Ambari Metrics to an existing repository](build/README.md#add-python-3-ambari-metrics-to-an-existing-repository).
 
 If on windows:
 ```
