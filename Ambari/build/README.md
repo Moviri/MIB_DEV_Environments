@@ -11,8 +11,10 @@ then successfully started MySQL and imported the Ambari schema after correcting
 log ownership. Installation progressed through launcher repairs to Hadoop
 installation, where all four hosts reported Python 2 syntax in `distro-select`
 when invoked by Ambari's Python 3 wrapper. The selector conversion passes local
-query and version-selection tests; the remote retry and full cluster validation
-remain pending.
+query and version-selection tests. On retry the agents reported version 3.3.0.
+The Timeline Service V2 install then stopped because the original bundle lacked
+`ranger_3_3_0-yarn-plugin`. Building and installing the expanded bundle on AWS
+remains to be verified.
 
 ## Build host
 
@@ -45,8 +47,11 @@ bash build-packages.sh repo
 ```
 
 Run each command only after the preceding one succeeds. The default Bigtop
-selection is `bigtop-select hadoop zookeeper`. Hadoop supplies HDFS, YARN and
-MapReduce packages. Bigtop's build dependency graph adds its prerequisites.
+selection is `bigtop-select hadoop zookeeper ranger hbase`. Hadoop supplies HDFS,
+YARN and MapReduce packages. Ambari's Rocky 8 stack package lists also request
+the Ranger HDFS plugin for HDFS and the Ranger YARN plugin and HBase RPM for
+YARN. These packages are needed even when the Ranger and HBase services are
+unselected in the wizard. Bigtop's build dependency graph adds build prerequisites.
 The build uses `-PparentDir=/usr/bigtop -PpkgSuffix`, which is required for
 Ambari's versioned package names and `/usr/bigtop/3.3.0` layout.
 
@@ -84,8 +89,8 @@ replace it. After Bigtop succeeds, run the `repo` stage as usual.
 To build additional services, supply the same selection to `bigtop` and `repo`:
 
 ```bash
-bash build-packages.sh bigtop hadoop zookeeper hbase hive tez spark kafka
-bash build-packages.sh repo hadoop zookeeper hbase hive tez spark kafka
+bash build-packages.sh bigtop hadoop zookeeper ranger hbase hive tez spark kafka
+bash build-packages.sh repo hadoop zookeeper ranger hbase hive tez spark kafka
 ```
 
 `bigtop-select` is always built. For the remaining components supported by the
@@ -93,6 +98,39 @@ release, see `bash build-packages.sh --help` and the component allowlist in the
 script. Include every service that will be selected in Ambari's installation
 wizard. The `repo` stage checks package presence, not dependency closure or
 service runtime compatibility.
+
+### Extend an existing 46-RPM bundle
+
+From `Ambari/`, keep the previous build's work and output directories so the
+builder can reuse completed packages. Check free space before building.
+
+```bash
+git pull --ff-only &&
+bash build-packages.sh bigtop ranger hbase &&
+bash build-packages.sh repo
+```
+
+The last command checks the full default selection and regenerates metadata in
+the directory already served by nginx. For a cluster with the repository ID
+shown in the failed task, verify each node can resolve all three RPMs:
+
+```bash
+(
+  set -e
+  for host in bigtop-hostname{0..3}; do
+    echo "$host"
+    docker compose exec -T "$host" dnf --refresh --disablerepo='*' \
+      --enablerepo=BIGTOP-3.3.0-repo-1 makecache
+    for pkg in ranger_3_3_0-yarn-plugin ranger_3_3_0-hdfs-plugin hbase_3_3_0; do
+      docker compose exec -T "$host" dnf --disablerepo='*' \
+        --enablerepo=BIGTOP-3.3.0-repo-1 list --showduplicates "$pkg"
+    done
+  done
+)
+```
+
+Check for each package under the stack repository ID, then retry the failed
+installation in the existing Ambari wizard.
 
 ## Outputs and retries
 

@@ -104,7 +104,11 @@ case "$stage" in
         for component in "${components[@]}"; do
             case "$component" in
                 bigtop-*) require_package "$component" ;;
-                ranger) require_package ranger_3_3_0-admin ;;
+                ranger)
+                    require_package ranger_3_3_0-admin
+                    require_package ranger_3_3_0-hdfs-plugin
+                    require_package ranger_3_3_0-yarn-plugin
+                    ;;
                 *) require_package "${component}_3_3_0" ;;
             esac
         done

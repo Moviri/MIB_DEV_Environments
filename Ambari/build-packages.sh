@@ -9,9 +9,9 @@ Usage: bash build-packages.sh preflight|ambari|bigtop|repo [bigtop-component ...
   preflight  Check Docker, architecture and build disk space; make no images.
   ambari     Build Ambari 3.0.0 server and agent RPMs.
   bigtop     Build selected Bigtop 3.3.0 components and build dependencies.
-             Default: bigtop-select, hadoop, zookeeper (HDFS/YARN/MapReduce).
+             Default: bigtop-select, hadoop, zookeeper, ranger, hbase.
   repo       Check the built RPMs and write the local-install checksum manifest.
-             Pass the same component list used for 'bigtop'.
+             Pass the full component selection to validate an extended bundle.
 
 Environment:
   AMBARI_BUILD_WORK       Source/cache/log directory (default: .package-build).
@@ -38,7 +38,7 @@ if [[ "$stage" != bigtop && "$stage" != repo && $# -ne 0 ]]; then
 fi
 components=("$@")
 if [[ ${#components[@]} -eq 0 ]]; then
-    components=(bigtop-select hadoop zookeeper)
+    components=(bigtop-select hadoop zookeeper ranger hbase)
 fi
 for component in "${components[@]}"; do
     case "$component" in
