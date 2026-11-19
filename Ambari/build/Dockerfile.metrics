@@ -5,4 +5,5 @@ RUN dnf -y module enable maven:3.8 && \
 ENV JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk
 ENV PATH="${JAVA_HOME}/bin:${PATH}"
 COPY container-build.sh build-metrics.sh /opt/ambari-build/
+COPY patches/metrics-launchers.patch /opt/ambari-build/
 ENTRYPOINT ["/bin/bash", "/opt/ambari-build/container-build.sh"]

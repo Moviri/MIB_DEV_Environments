@@ -6,17 +6,10 @@ checks their pinned SHA-512 hashes, and runs in a digest-pinned Bigtop Rocky 8
 x86_64 build container. Java 17 is selected for Ambari and Java 8 for Bigtop.
 The optional Metrics stage uses its own Rocky 8 image and JDK 8.
 
-**Validation status:** the AWS host reported successful Ambari and Bigtop
-builds and finalized a local repository containing 46 RPMs. Fresh installation
-then successfully started MySQL and imported the Ambari schema after correcting
-log ownership. Installation progressed through launcher repairs to Hadoop
-installation, where all four hosts reported Python 2 syntax in `distro-select`
-when invoked by Ambari's Python 3 wrapper. The selector conversion passes local
-query and version-selection tests. On retry the agents reported version 3.3.0.
-The Timeline Service V2 install then stopped because the original bundle lacked
-`ranger_3_3_0-yarn-plugin`. AWS subsequently built the expanded 70-RPM bundle and
-all four nodes resolved the Ranger plugins and HBase. Grafana installation then requested the
-separately packaged Metrics monitor.
+For a fresh four-node environment, follow the [installation guide](../README.md).
+The AWS deployment passed the engineer's ETL after a collector classpath repair
+and Grafana startup recovery. Metrics release 2 packages both launcher changes.
+A full fresh four-node deployment with this new release still needs validation.
 
 ## Build host
 
@@ -295,9 +288,18 @@ HBase 2.4.13, Hadoop 3.3.4, Phoenix 5.1.2 and Grafana 11.5.2 archives.
 The collector has its own library versions. Cluster HBase and Hadoop continue to
 use their Bigtop packages. The build caches the archives in
 `.package-build/downloads/` and verifies the packaged monitor on Rocky 8
-before copying the four RPMs. A local x86_64 Rocky 8 build produced all four
-`3.1.0-1.x86_64` RPMs (746 MiB combined). Cluster service startup still
-requires a live check.
+before copying the four RPMs. Release `3.1.0-2` puts Jersey 1 first on the collector classpath and checks
+the Grafana process before trusting its PID file. To exercise both packaged
+launchers on the build host after the Metrics stage:
+
+```bash
+bash build/test-metrics-launchers.sh
+```
+
+This uses a disposable Rocky container and the built RPMs. It checks the
+collector's Jersey URI construction and starts Grafana as the service user
+with an empty PID file, then queries its health endpoint and tests stop/start
+handling.
 
 ## Upstream references
 

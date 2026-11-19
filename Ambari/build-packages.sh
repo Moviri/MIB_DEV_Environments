@@ -4,8 +4,9 @@ set -euo pipefail
 
 usage() {
     cat <<'EOF'
-Usage: bash build-packages.sh preflight|ambari|metrics|bigtop|repo [bigtop-component ...]
+Usage: bash build-packages.sh all|preflight|ambari|metrics|bigtop|repo [bigtop-component ...]
 
+  all        Build and finalize the default cluster bundle, including Metrics.
   preflight  Check Docker, architecture and build disk space; make no images.
   ambari     Build Ambari 3.0.0 server and agent RPMs.
   metrics    Build the Python 3 Ambari Metrics monitor, collector, Hadoop sink and Grafana RPMs.
@@ -30,6 +31,13 @@ EOF
 
 case "${1:-}" in
     -h|--help) usage; exit 0 ;;
+    all)
+        [[ $# == 1 ]] || { usage >&2; exit 2; }
+        for stage in preflight ambari bigtop metrics repo; do
+            bash "${BASH_SOURCE[0]}" "$stage"
+        done
+        exit 0
+        ;;
     preflight|ambari|metrics|bigtop|repo) stage=$1; shift ;;
     *) usage >&2; exit 2 ;;
 esac

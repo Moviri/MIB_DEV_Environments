@@ -39,7 +39,6 @@ fi
 # Check if MySQL data directory is already initialized
 if [ ! -d "/var/lib/mysql/mysql" ]; then
     echo "Initializing MySQL data directory"
-    rm -rf /var/lib/mysql/*
     mysqld --initialize --user=mysql
     chown -R mysql:mysql /var/lib/mysql
 else
@@ -69,7 +68,8 @@ else
     echo "Setting up MySQL for the first time"
     
     # Extract the most recent temporary password (get the last occurrence)
-    MYSQL_ROOT_PASS=$(cat /var/log/mysql/mysqld.log | grep -i 'password is generated' | tail -1 | rev | cut -d ':' -f1 | rev | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')
+    set +x
+    MYSQL_ROOT_PASS=$(sed -n 's/^.*[Tt]emporary password is generated for root@localhost: //p' /var/log/mysql/mysqld.log | tail -1)
     
     if [ -z "$MYSQL_ROOT_PASS" ]; then
         echo "ERROR: Could not extract MySQL temporary password from log"
@@ -107,6 +107,8 @@ GRANT ALL PRIVILEGES ON rangerkms.* TO 'rangerkms'@'%';
 FLUSH PRIVILEGES;" > /root/ambari-server-setup.sql
 
     mysql --connect-expired-password -u root -p"${MYSQL_ROOT_PASS}" < /root/ambari-server-setup.sql
+    unset MYSQL_ROOT_PASS
+    set -x
 fi
 
 mysql --connect-expired-password -uambari -pambari ambari < /var/lib/ambari-server/resources/Ambari-DDL-MySQL-CREATE.sql

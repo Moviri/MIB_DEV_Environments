@@ -13,36 +13,36 @@ for i in $INSTANCES ; do
 done
 
 for i in $INSTANCES ; do
-	docker compose exec -it $i dnf install -y sudo openssh-server openssh-clients which iproute net-tools less vim-enhanced telnet lsof wget curl
-	docker compose exec -it $i dnf install -y initscripts wget curl tar unzip git
-	docker compose exec -it $i dnf install -y dnf-plugins-core
-	docker compose exec -it $i dnf config-manager --set-enabled powertools
-	docker compose exec -it $i dnf update -y || echo "update failed, but continuing"
+	docker compose exec -T $i dnf install -y sudo openssh-server openssh-clients which iproute net-tools less vim-enhanced telnet lsof wget curl
+	docker compose exec -T $i dnf install -y initscripts wget curl tar unzip git
+	docker compose exec -T $i dnf install -y dnf-plugins-core
+	docker compose exec -T $i dnf config-manager --set-enabled powertools
+	docker compose exec -T $i dnf update -y || echo "update failed, but continuing"
 done
 
 for i in $INSTANCES ; do
-	#docker compose exec -it $i ssh-keygen -t rsa -N "" -f /root/.ssh/id_rsa
+	#docker compose exec -T $i ssh-keygen -t rsa -N "" -f /root/.ssh/id_rsa
     ### Add by call518
-	docker compose exec -it $i sh -c 'rm -f /root/.ssh/id_rsa /root/.ssh/id_rsa.pub && ssh-keygen -t rsa -N "" -b 2048 -m PEM -f /root/.ssh/id_rsa'
+	docker compose exec -T $i sh -c 'rm -f /root/.ssh/id_rsa /root/.ssh/id_rsa.pub && ssh-keygen -t rsa -N "" -b 2048 -m PEM -f /root/.ssh/id_rsa'
     ###
 	
 	# Start SSH service
-	docker compose exec -it $i systemctl enable sshd
-	docker compose exec -it $i systemctl start sshd
+	docker compose exec -T $i systemctl enable sshd
+	docker compose exec -T $i systemctl start sshd
 done
 
 for i in $INSTANCES ; do
-	docker compose exec -it $i setenforce 0 || echo "selinux is disabled"
-	docker compose exec -it $i sed -i 's/enabled=0/enabled=1/g' /etc/yum.repos.d/Rocky-Devel.repo
+	docker compose exec -T $i setenforce 0 || echo "selinux is disabled"
+	docker compose exec -T $i sed -i 's/enabled=0/enabled=1/g' /etc/yum.repos.d/Rocky-Devel.repo
 done
 
 docker compose cp bigtop-hostname0:/root/.ssh/id_rsa.pub bigtop-hostname0.pub
 
 for i in $INSTANCES ; do
 	docker compose cp bigtop-hostname0.pub $i:/root/.ssh/authorized_keys
-	docker compose exec -it $i chown root:root /root/.ssh/authorized_keys 
-	docker compose exec -it $i chmod 600 /root/.ssh/authorized_keys
-	docker compose exec -it bigtop-hostname0 ssh -o StrictHostKeyChecking=no $i echo "Connection successful"
+	docker compose exec -T $i chown root:root /root/.ssh/authorized_keys
+	docker compose exec -T $i chmod 600 /root/.ssh/authorized_keys
+	docker compose exec -T bigtop-hostname0 ssh -o StrictHostKeyChecking=no $i echo "Connection successful"
 done
 
 rm bigtop-hostname0.pub

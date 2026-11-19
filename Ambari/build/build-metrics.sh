@@ -15,8 +15,14 @@ done
 fetch_archive "$grafana" "https://dl.grafana.com/oss/release/$grafana"
 
 cd "$source_dir"
+# rpmbuild can be retried with a cached source tree. Restore the two inputs
+# from the verified archive so every attempt applies exactly the same patch.
+tar -xzf "/work/downloads/ambari-metrics-$revision.tar.gz" --strip-components=1 \
+    "ambari-metrics-$revision/ambari-metrics-timelineservice/conf/unix/ambari-metrics-collector" \
+    "ambari-metrics-$revision/ambari-metrics-grafana/conf/unix/ambari-metrics-grafana"
+patch --batch --fuzz=0 -p1 < /opt/ambari-build/metrics-launchers.patch
 # Grafana produces files read directly by the assembly without a Maven dependency.
-mvn --batch-mode clean package -Prpm -DskipTests -DskipPythonTests=true -Drat.skip=true \
+mvn --batch-mode clean package -Prpm -Drelease.version=2 -DskipTests -DskipPythonTests=true -Drat.skip=true \
     -Dhbase.tar="file:/work/downloads/$hbase" -Dhadoop.tar="file:/work/downloads/$hadoop" \
     -Dphoenix.tar="file:/work/downloads/$phoenix" -Dgrafana.tar="file:/work/downloads/$grafana"
 
@@ -24,7 +30,7 @@ rpms=()
 for suffix in collector monitor hadoop-sink grafana; do
     name="ambari-metrics-$suffix"
     files=(ambari-metrics-assembly/target/rpm/"$name"/RPMS/x86_64/*.rpm)
-    [[ ${#files[@]} -eq 1 && -f "${files[0]}" && $(rpm -qp --qf '%{NAME}.%{ARCH}' "${files[0]}") == "$name.x86_64" ]] || {
+    [[ ${#files[@]} -eq 1 && -f "${files[0]}" && $(rpm -qp --qf '%{NAME}-%{RELEASE}.%{ARCH}' "${files[0]}") == "$name-2.x86_64" ]] || {
         echo "Expected one x86_64 RPM for $name" >&2; exit 1
     }
     rpms+=("$(realpath "${files[0]}")")
