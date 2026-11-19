@@ -134,6 +134,28 @@ its shim to exclude this transitive dependency from `kylin-server-base`.
 Both modules already declare `calcite-linq4j:1.16.0` directly. The new patch
 invalidates Ranger's cached RPM build markers and preserves the Maven cache.
 
+### Resume a Ranger distribution assembly failure
+
+If `ranger-distro` fails while creating `schema-registry-plugin` and reports a
+missing `META-INF/maven/org.apache.ranger/ranger-distro/pom.xml` entry, keep the
+work and RPM directories. From `Ambari/` on the build host, resume the default
+fresh-install profile with:
+
+```bash
+git pull --ff-only &&
+bash build-packages.sh bigtop &&
+bash build-packages.sh metrics &&
+bash build-packages.sh repo
+```
+
+The failing standalone JAR tries to unpack the distribution module's own JAR.
+Bigtop builds its Ranger RPMs from tarballs. The patch omits the standalone
+JAR from Ranger's Linux distribution profile and keeps the separate Schema
+Registry plugin in the Admin web application. Bigtop invokes Maven with
+`clean install` so distribution archives are assembled once. The builder invalidates Ranger's cached
+RPM markers when the patch changes. Gradle reuses completed Bigtop targets and
+builds any remaining ones before collecting the RPMs.
+
 ## Outputs and retries
 
 Defaults are relative to `Ambari/`, even if the command runs elsewhere:

@@ -1,0 +1,14 @@
+--- a/distro/pom.xml
++++ b/distro/pom.xml
+@@ -712,11 +712,10 @@
+                                         <descriptor>src/main/assembly/ranger-src.xml</descriptor>
+                                         <descriptor>src/main/assembly/plugin-atlas.xml</descriptor>
+                                         <descriptor>src/main/assembly/plugin-sqoop.xml</descriptor>
+                                         <descriptor>src/main/assembly/plugin-kylin.xml</descriptor>
+                                         <descriptor>src/main/assembly/plugin-elasticsearch.xml</descriptor>
+-                                        <descriptor>src/main/assembly/plugin-schema-registry.xml</descriptor>
+                                         <descriptor>src/main/assembly/plugin-presto.xml</descriptor>
+                                     </descriptors>
+                                 </configuration>
+                             </execution>
+                         </executions>
