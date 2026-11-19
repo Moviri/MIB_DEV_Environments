@@ -132,6 +132,13 @@ shown in the failed task, verify each node can resolve all three RPMs:
 Check for each package under the stack repository ID, then retry the failed
 installation in the existing Ambari wizard.
 
+If an earlier Ranger build stopped at `ranger-kylin-plugin` with HTTP 401 for
+`calcite-linq4j:1.16.0-kylin-r5`, use the same pull, build and finalization
+commands above. The builder patches both the Ranger 2.4.0 Kylin plugin and
+its shim to exclude this transitive dependency from `kylin-server-base`.
+Both modules already declare `calcite-linq4j:1.16.0` directly. The new patch
+invalidates Ranger's cached RPM build markers and preserves the Maven cache.
+
 ## Outputs and retries
 
 Defaults are relative to `Ambari/`, even if the command runs elsewhere:

@@ -23,6 +23,8 @@ class BigtopPatchTests(unittest.TestCase):
         self.root = Path(self.temporary.name)
         self.packaging = self.root / "bigtop-packages/src/common/hadoop"
         self.packaging.mkdir(parents=True)
+        self.ranger_packaging = self.packaging.parent / "ranger"
+        self.ranger_packaging.mkdir()
         self.markers = [self.root / "build/hadoop" / name for name in (".srpm", ".rpm")]
         self.preserved = [
             self.root / "build/zookeeper/.rpm",
@@ -62,6 +64,20 @@ class BigtopPatchTests(unittest.TestCase):
         self.assertEqual(
             (self.packaging / PATCH).read_bytes(), (BUILD / "patches" / PATCH).read_bytes()
         )
+
+    def test_ranger_patch_invalidates_only_ranger_on_retry(self):
+        shutil.copyfile(BUILD / "patches" / PATCH, self.packaging / PATCH)
+        ranger_markers = [self.root / "build/ranger" / name for name in (".srpm", ".rpm")]
+        ranger_markers[0].parent.mkdir(parents=True)
+        for marker in ranger_markers:
+            marker.touch()
+        self.run_helper()
+        self.assertTrue(all(marker.exists() for marker in self.markers))
+        self.assertTrue(all(not marker.exists() for marker in ranger_markers))
+        for marker in ranger_markers:
+            marker.touch()
+        self.run_helper()
+        self.assertTrue(all(marker.exists() for marker in ranger_markers))
 
     def test_catalog_patch_applies_after_bigtop_triple_beam_patch(self):
         package = self.root / CATALOG
