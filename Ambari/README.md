@@ -42,6 +42,13 @@ export AMBARI_BUILD_JOBS=2
 bash build-packages.sh all
 ```
 
+To verify a build from scratch, use `bash build-packages.sh all --no-cache`
+in a new checkout with the default work and output paths. This mode refuses
+existing build data, checks the pinned base images and disables Docker's build
+cache for each builder invocation. The stages can share downloads created
+during this run. An earlier checkout and its RPMs can stay in place if the
+build host has room for both.
+
 To resume a completed core build, run `bash build-packages.sh metrics && bash
 build-packages.sh repo` in the same checkout with the original output directory.
 The final bundle includes the Ranger plugins and HBase required by YARN and the

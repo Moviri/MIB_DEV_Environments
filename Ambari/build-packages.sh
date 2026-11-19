@@ -5,8 +5,11 @@ set -euo pipefail
 usage() {
     cat <<'EOF'
 Usage: bash build-packages.sh all|preflight|ambari|metrics|bigtop|repo [bigtop-component ...]
+       bash build-packages.sh all --no-cache
 
   all        Build and finalize the default cluster bundle, including Metrics.
+             --no-cache requires empty work/output directories and rebuilds
+             the Docker builder images without using cached build steps.
   preflight  Check Docker, architecture and build disk space; make no images.
   ambari     Build Ambari 3.0.0 server and agent RPMs.
   metrics    Build the Python 3 Ambari Metrics monitor, collector, Hadoop sink and Grafana RPMs.
@@ -32,7 +35,22 @@ EOF
 case "${1:-}" in
     -h|--help) usage; exit 0 ;;
     all)
-        [[ $# == 1 ]] || { usage >&2; exit 2; }
+        if [[ $# == 2 && $2 == --no-cache ]]; then
+            root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+            for directory in "${AMBARI_BUILD_WORK:-$root/.package-build}" "${AMBARI_BUILD_OUTPUT:-$root/ambari-repo}"; do
+                if [[ -e "$directory" || -L "$directory" ]]; then
+                    [[ -d "$directory" ]] || { echo "Expected a directory at $directory" >&2; exit 1; }
+                    first_entry=$(find -H "$directory" -mindepth 1 -maxdepth 1 -print -quit)
+                    if [[ -n "$first_entry" ]]; then
+                        echo "Clean build requires an empty $directory. Use a fresh checkout or new work/output paths." >&2
+                        exit 1
+                    fi
+                fi
+            done
+            export AMBARI_DOCKER_NO_CACHE=1
+        elif [[ $# != 1 ]]; then
+            usage >&2; exit 2
+        fi
         for stage in preflight ambari bigtop metrics repo; do
             bash "${BASH_SOURCE[0]}" "$stage"
         done
@@ -98,7 +116,11 @@ if [[ "$stage" == metrics ]]; then
     image=ambari-metrics-rocky8-builder:b1ac7d78
     dockerfile="$script_dir/build/Dockerfile.metrics"
 fi
-docker build --platform linux/amd64 -t "$image" -f "$dockerfile" "$script_dir/build"
+build_flags=()
+if [[ ${AMBARI_DOCKER_NO_CACHE:-0} == 1 ]]; then
+    build_flags+=(--pull --no-cache)
+fi
+docker build "${build_flags[@]}" --platform linux/amd64 -t "$image" -f "$dockerfile" "$script_dir/build"
 docker image inspect "$image" --format '{{.Id}}' > "$work/builder-image-id.txt"
 cp "$script_dir/build/sources.sha512" "$work/sources.sha512"
 docker run --rm --platform linux/amd64 \
