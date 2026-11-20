@@ -7,9 +7,10 @@ x86_64 build container. Java 17 is selected for Ambari and Java 8 for Bigtop.
 The optional Metrics stage uses its own Rocky 8 image and JDK 8.
 
 For a fresh four-node environment, follow the [installation guide](../README.md).
-The AWS deployment passed the engineer's ETL after a collector classpath repair
-and Grafana startup recovery. Metrics release 2 packages both launcher changes.
-A full fresh four-node deployment with this new release still needs validation.
+The tested Linux build command, run from a fresh checkout's `Ambari/` directory,
+is `bash build-packages.sh all --no-cache`. It includes Metrics release 2 and
+finalizes the RPM bundle. The four-node AWS wizard install completed without
+warnings and the ETL passed against that fresh environment.
 
 ## Build host
 
@@ -193,9 +194,10 @@ After both build stages succeed, `repo` generates metadata, `RPM-INVENTORY.tsv`,
 `LOCAL_RPMS.sha256`. A new build invalidates that last file until `repo` succeeds
 again. Do not run installation concurrently with a package build.
 
-## Install into a fresh environment
+## Install the complete bundle into a fresh environment
 
-If building on another host or using `AMBARI_BUILD_OUTPUT`, copy the **entire
+For the five-service profile, include the `metrics` stage before finalizing with
+`repo`. If building on another host or using `AMBARI_BUILD_OUTPUT`, copy the **entire
 output directory contents** to the installation host's `Ambari/ambari-repo/`,
 including the checksum manifest. Use an empty destination so older RPMs are
 not mixed into the new repository. Preserve the package subdirectories.
@@ -204,8 +206,7 @@ not mixed into the new repository. Preserve the package subdirectories.
 cd ambari-repo
 sha256sum --strict -c LOCAL_RPMS.sha256
 cd ..
-docker compose up -d
-bash run.sh
+./run.sh --fresh
 ```
 
 `setup-ambari-repo-script.sh` detects `LOCAL_RPMS.sha256`, checks it, and skips

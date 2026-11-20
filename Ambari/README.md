@@ -26,28 +26,29 @@ df -h .
 
 ## 2. Prepare the RPM repository
 
-**If you have a finalized bundle from this version**, copy it to the clean host
-and extract it from `Ambari/` into an empty destination:
+**Build from source on a fresh clone.** From `Ambari/` on the build host, use a
+persistent terminal session. This is the command used for the successful
+four-node AWS installation and ETL test.
+
+```bash
+export AMBARI_BUILD_JOBS=2
+bash build-packages.sh all --no-cache
+```
+
+The stages run in order: preflight, Ambari server and agent, Bigtop, Python 3
+Ambari Metrics, then RPM repository finalization. The command requires empty
+work and output directories, rebuilds the builder images without cached layers,
+and writes stage logs under `.package-build/logs/`. Success produces
+`ambari-repo/LOCAL_RPMS.sha256` and `ambari-repo/RPM-INVENTORY.tsv`.
+For a build that can reuse existing downloads and build state, omit `--no-cache`.
+
+**Reuse a finalized bundle** when testing another deployment of the same Git
+revision. Copy the archive to the new machine and extract it into the fresh
+checkout from `Ambari/`:
 
 ```bash
 tar -xf /path/to/ambari-rocky8-rpms.tar -C .
 ```
-
-**To build the bundle from source**, use a persistent terminal session on the
-build host. The command stops at the first failed stage. Each compilation stage
-writes its own log under `.package-build/logs/`.
-
-```bash
-export AMBARI_BUILD_JOBS=2
-bash build-packages.sh all
-```
-
-To verify a build from scratch, use `bash build-packages.sh all --no-cache`
-in a new checkout with the default work and output paths. This mode refuses
-existing build data, checks the pinned base images and disables Docker's build
-cache for each builder invocation. The stages can share downloads created
-during this run. An earlier checkout and its RPMs can stay in place if the
-build host has room for both.
 
 To resume a completed core build, run `bash build-packages.sh metrics && bash
 build-packages.sh repo` in the same checkout with the original output directory.
@@ -80,10 +81,17 @@ Open the Ambari UI on port 8080 (initial login `admin` / `admin`). For a remote
 VM, you can run `ssh -L 8080:localhost:8080 admin@YOUR_EC2_HOST` from your
 workstation, then open [the local Ambari UI](http://localhost:8080).
 
-1. Choose the Bigtop 3.3.0 stack and the Red Hat 8 repository. Use
-   `http://bigtop-hostname0.demo.local/` as the base URL.
-2. Enter these target hosts and use manual registration (the agents are already
-   installed and started). Confirm all four register before continuing.
+For the tested wizard path, continue below. To trial the same topology through
+the API, go straight to [Install from the blueprint](#install-from-the-blueprint)
+after bootstrap.
+
+### Wizard host registration and node 0's private key
+
+1. Choose **BIGTOP 3.3.0** and the **Red Hat 8** repository. Set its base URL to
+   `http://bigtop-hostname0.demo.local/`.
+2. Enter the following target hosts. Select **Perform manual registration on
+   hosts and do not use SSH**. Bootstrap already started the agents. Leave the
+   SSH key field empty and confirm all four hosts register.
 
    ```text
    bigtop-hostname0.demo.local
@@ -92,19 +100,81 @@ workstation, then open [the local Ambari UI](http://localhost:8080).
    bigtop-hostname3.demo.local
    ```
 
-3. Select **HDFS, YARN, MapReduce2, ZooKeeper and Ambari Metrics**. The Ranger
-   plugins and HBase RPM are available for dependent components even with the
-   Ranger and HBase services unselected. For the tested host assignments put
-   Metrics Grafana on node 0 and Metrics Collector on node 2.
-4. Complete the install and start the services. Run the HDFS, YARN, MapReduce2,
-   ZooKeeper and Ambari Metrics service checks. Check Grafana from the host:
+If you choose the wizard's **SSH registration** option instead, use the current
+node 0 container's `/root/.ssh/id_rsa` with SSH user `root`. Setup generates a
+new key on each run. To save it to a private temporary file on the Docker host for this wizard run:
 
-   ```bash
-   docker compose exec -T bigtop-hostname0 curl -fsS http://127.0.0.1:3000/api/health
-   ```
+```bash
+keyfile=$(mktemp) && docker compose exec -T bigtop-hostname0 cat /root/.ssh/id_rsa > "$keyfile" && echo "$keyfile"
+```
 
-   Look for `"database": "ok"`. Verify recent metrics in Grafana and run the
-   same ETL used on the working cluster before switching to this instance.
+Use that file for SSH registration and remove it afterward with `rm -- "$keyfile"`. Manual
+registration and blueprint deployment both work without exporting the key.
+
+### Minimum services and host assignments
+
+Select **HDFS** as the file system and **YARN, MapReduce2, ZooKeeper, and Ambari
+Metrics** as services. Leave the other services unchecked. The build includes
+HBase and the Ranger plugins because the selected services require their RPMs.
+
+Use these assignments on **Assign Masters** and **Assign Slaves and Clients**.
+Node numbers refer to the four FQDNs above.
+
+| Node | Assigned masters | DataNode | Router | NodeManager | Client |
+| --- | --- | --- | --- | --- | --- |
+| 0 | NameNode, ResourceManager, Timeline Reader, YARN Registry DNS, ZooKeeper Server, Metrics Grafana | No | No | No | Yes |
+| 1 | Secondary NameNode, Timeline Service V2, MapReduce History Server, ZooKeeper Server | Yes | No | Yes | Yes |
+| 2 | ZooKeeper Server, Metrics Collector | Yes | No | Yes | Yes |
+| 3 | — | Yes | No | Yes | Yes |
+
+**Client** installs the HDFS, YARN, MapReduce2 and ZooKeeper clients together.
+Ambari deploys a Metrics Monitor on each host. Complete the wizard and run the
+[cluster checks](#verify-the-installation).
+
+### Install from the blueprint
+
+Use a **separate clean Docker host** for this trial. Copy the finalized bundle
+and use the same Git revision as the working cluster. Run `./run.sh --fresh`
+once on the trial host, then leave the wizard at its welcome screen. The two
+commands below run on that host from `Ambari/` and require Python 3.
+
+```bash
+python3 blueprint/install.py register
+python3 blueprint/install.py deploy
+```
+
+Each command prompts for the trial server's Ambari admin password and checks
+that the server has zero clusters and exactly the four expected agents.
+`register` configures BIGTOP's Rocky 8 repository to use node 0 and submits
+the [blueprint](blueprint/blueprint.json) for Ambari's topology validation.
+After registration succeeds, `deploy` reads the [host mappings](blueprint/clustertemplate.json),
+checks the saved repository URL, prompts for a new Grafana password, and submits
+an asynchronous install-and-start request for `mov-ambari`. Follow its request
+in **Background Operations**. If deployment already created a cluster, inspect
+that request before retrying any failed tasks.
+
+The files come from the wizard export for this Compose topology. The blueprint
+includes all four Metrics Monitors explicitly and keeps the wizard's service
+settings and internal hostnames. The template keeps the exported memory settings
+(`NEVER_APPLY` for stack recommendations), so use the same host sizing for
+the comparison. Saved Grafana and SSL passwords were removed.
+The profile uses HTTP. Ambari inherits stack defaults for unused SSL stores
+and receives a generated fallback for any missing required password. The original
+ZIP and an SSH key are unnecessary for this trial.
+
+### Verify the installation
+
+Run the HDFS, YARN, MapReduce2, ZooKeeper and Ambari Metrics service checks.
+In **Ambari Metrics → Summary**, look for **Metrics Collector: Started**,
+**Grafana: Started**, and **4/4 Live Metrics Monitors**. From the trial host:
+
+```bash
+docker compose exec -T bigtop-hostname0 curl -fsS http://127.0.0.1:3000/api/health
+```
+
+Look for `"database": "ok"`, confirm recent metrics, and point the ETL at the
+new endpoint. The fresh source build and wizard install passed the ETL on AWS.
+The blueprint path still needs that end-to-end check.
 
 For the existing Windows workflow, copy the finalized bundle into
 `Ambari/ambari-repo/`, run `docker compose up -d` on a fresh Docker host and
