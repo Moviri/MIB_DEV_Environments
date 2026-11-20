@@ -15,10 +15,10 @@ the core stack plus headroom for Metrics and Docker.
 Check both the checkout filesystem and Docker's data directory. Builds and
 installation need outbound network access for upstream dependencies and OS packages.
 
-Clone this repository and change to its `Ambari/` directory. While PR #4 is open:
+Clone the repository's `main` branch and change to its `Ambari/` directory.
 
 ```bash
-git clone --branch feat-ambari-source-build https://github.com/Moviri/MIB_DEV_Environments.git
+git clone --branch main https://github.com/Moviri/MIB_DEV_Environments.git
 cd MIB_DEV_Environments/Ambari
 docker compose version
 docker info --format '{{.DockerRootDir}}'
