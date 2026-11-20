@@ -27,13 +27,19 @@ df -h .
 
 ## 2. Prepare the RPM repository
 
-**Build from source on a fresh clone.** From `Ambari/` on the build host, use a
-persistent terminal session. This is the command used for the successful
-four-node AWS installation and ETL test.
+**Allow more than an hour for a clean source build.** On the AWS build host,
+the Ambari server and agent Maven build alone took 51 minutes 41 seconds.
+A separate successful Bigtop build of Hadoop and ZooKeeper took 20 minutes
+51 seconds. The full build also includes Ranger, HBase, Metrics and repository
+finalization. Its total wall-clock time has yet to be measured.
+
+From `Ambari/` in a fresh clone, run the build in a persistent Bash session.
+The `real` time printed at the end measures all stages through the finalized
+RPM repository. Cluster installation starts in the next section.
 
 ```bash
 export AMBARI_BUILD_JOBS=2
-bash build-packages.sh all --no-cache
+time bash build-packages.sh all --no-cache
 ```
 
 The stages run in order: preflight, Ambari server and agent, Bigtop, Python 3
