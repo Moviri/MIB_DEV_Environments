@@ -9,8 +9,9 @@ the same finalized RPM bundle on their own hosts.
 Use a separate Linux x86_64 machine with Docker Engine and the Compose v2 plugin.
 The Compose project uses fixed container names and host ports 8080 and 3000.
 Keep the existing cluster available until its replacement passes your ETL test.
-The AWS development configuration has 8 vCPUs and 32 GiB RAM. For a source build,
-allow about 100 GB free for the core stack plus headroom for Metrics and Docker.
+The [AWS instance configuration](#aws-instance-configuration) below records the
+host used for this deployment. For a source build, allow about 100 GB free for
+the core stack plus headroom for Metrics and Docker.
 Check both the checkout filesystem and Docker's data directory. Builds and
 installation need outbound network access for upstream dependencies and OS packages.
 
@@ -179,3 +180,23 @@ The blueprint path still needs that end-to-end check.
 For the existing Windows workflow, copy the finalized bundle into
 `Ambari/ambari-repo/`, run `docker compose up -d` on a fresh Docker host and
 then run `.\run.ps1` from PowerShell.
+
+## AWS instance configuration
+
+The four cluster nodes ran as Docker containers on a single EC2 instance.
+
+| Setting | Value used |
+| --- | --- |
+| EC2 instance type | `m4.2xlarge` (8 vCPUs, 32 GiB RAM) |
+| Host operating system | Debian 13 |
+| Container operating system | Rocky Linux 8 |
+| Provisioned storage | 100 GB |
+| EC2 security groups | Moviri and Ambari |
+
+## Supporting links
+
+- [Video walkthrough used for the original setup](https://www.youtube.com/watch?v=Ao95xAGsA20)
+- [Ambari 3.0 Hadoop operations course](https://github.com/call518/ambari-3.0-hadoop-ops-course) — source of the original setup scripts.
+- [Apache Ambari 3.0.0 Docker environment setup](https://ambari.apache.org/docs/3.0.0/quick-start/environment-setup/docker-environment-setup)
+- [Install Docker Engine and the Compose plugin on Debian](https://docs.docker.com/engine/install/debian/)
+- [Rocky Linux 8 RPM build guide](build/README.md) — source archives, checksums, individual build stages, and retry instructions for this repository.
