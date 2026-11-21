@@ -1,0 +1,43 @@
+{
+  "blueprint": "mov-ambari",
+  "config_recommendation_strategy": "NEVER_APPLY",
+  "provision_action": "INSTALL_AND_START",
+  "configurations": [],
+  "host_groups": [
+    {
+      "name": "host_group_0",
+      "hosts": [
+        {
+          "fqdn": "bigtop-hostname0.demo.local"
+        }
+      ]
+    },
+    {
+      "name": "host_group_1",
+      "hosts": [
+        {
+          "fqdn": "bigtop-hostname1.demo.local"
+        }
+      ]
+    },
+    {
+      "name": "host_group_2",
+      "hosts": [
+        {
+          "fqdn": "bigtop-hostname2.demo.local"
+        }
+      ]
+    },
+    {
+      "name": "host_group_3",
+      "hosts": [
+        {
+          "fqdn": "bigtop-hostname3.demo.local"
+        }
+      ]
+    }
+  ],
+  "Clusters": {
+    "cluster_name": "mov-ambari"
+  }
+}

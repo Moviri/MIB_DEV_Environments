@@ -2,6 +2,16 @@
 
 set -ex
 
+script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+case "${1:-}" in
+    --configure-only)
+        # Resume after a successful schema import without replaying SQL.
+        exec /bin/bash "$script_dir/configure-ambari-server-script.sh"
+        ;;
+    "") ;;
+    *) echo "Usage: $0 [--configure-only]" >&2; exit 2 ;;
+esac
+
 # ambari agent
 yum install -y python3-distro
 yum install -y java-17-openjdk-devel
@@ -18,11 +28,18 @@ yum -y install https://dev.mysql.com/get/mysql80-community-release-el8-1.noarch.
 
 yum -y install mysql-server
 
+# MySQL's service runs as mysql and checks that its log is writable before
+# starting. Repair logs created by earlier root-run initialization attempts,
+# retaining the temporary root password needed below.
+install -d -o mysql -g mysql -m 750 /var/log/mysql
+if [ -f /var/log/mysql/mysqld.log ]; then
+    chown mysql:mysql /var/log/mysql/mysqld.log
+fi
+
 # Check if MySQL data directory is already initialized
 if [ ! -d "/var/lib/mysql/mysql" ]; then
     echo "Initializing MySQL data directory"
-    rm -rf /var/lib/mysql/*
-    mysqld --initialize
+    mysqld --initialize --user=mysql
     chown -R mysql:mysql /var/lib/mysql
 else
     echo "MySQL data directory already exists, skipping initialization"
@@ -51,7 +68,8 @@ else
     echo "Setting up MySQL for the first time"
     
     # Extract the most recent temporary password (get the last occurrence)
-    MYSQL_ROOT_PASS=$(cat /var/log/mysql/mysqld.log | grep -i 'password is generated' | tail -1 | rev | cut -d ':' -f1 | rev | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')
+    set +x
+    MYSQL_ROOT_PASS=$(sed -n 's/^.*[Tt]emporary password is generated for root@localhost: //p' /var/log/mysql/mysqld.log | tail -1)
     
     if [ -z "$MYSQL_ROOT_PASS" ]; then
         echo "ERROR: Could not extract MySQL temporary password from log"
@@ -89,29 +107,11 @@ GRANT ALL PRIVILEGES ON rangerkms.* TO 'rangerkms'@'%';
 FLUSH PRIVILEGES;" > /root/ambari-server-setup.sql
 
     mysql --connect-expired-password -u root -p"${MYSQL_ROOT_PASS}" < /root/ambari-server-setup.sql
+    unset MYSQL_ROOT_PASS
+    set -x
 fi
 
 mysql --connect-expired-password -uambari -pambari ambari < /var/lib/ambari-server/resources/Ambari-DDL-MySQL-CREATE.sql
 
-# setup Ambari MySQL
-
-wget https://repo1.maven.org/maven2/mysql/mysql-connector-java/8.0.28/mysql-connector-java-8.0.28.jar \
-  -O /usr/share/java/mysql-connector-java.jar
-
-ambari-server setup --jdbc-db=mysql --jdbc-driver=/usr/share/java/mysql-connector-java.jar
-
-echo "server.jdbc.url=jdbc:mysql://localhost:3306/ambari?useSSL=true&verifyServerCertificate=false&enabledTLSProtocols=TLSv1.2" >> /etc/ambari-server/conf/ambari.properties
-
-ambari-server setup -s \
-  -j /usr/lib/jvm/java-1.8.0-openjdk \
-  --ambari-java-home /usr/lib/jvm/java-17-openjdk \
-  --database=mysql \
-  --databasehost=localhost \
-  --databaseport=3306 \
-  --databasename=ambari \
-  --databaseusername=ambari \
-  --databasepassword=ambari
-
-
-ambari-server start
+bash "$script_dir/configure-ambari-server-script.sh"
 

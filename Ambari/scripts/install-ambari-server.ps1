@@ -11,6 +11,7 @@ function Exec($cmd, [switch]$CaptureOutput) {
         if ($LASTEXITCODE -ne 0) { throw "Command failed ($LASTEXITCODE): `n$cmd" }
     }
 }   
+Exec "docker compose cp configure-ambari-server-script.sh bigtop-hostname0:/root/configure-ambari-server-script.sh"
 Exec "docker compose cp install-ambari-server-script.sh bigtop-hostname0:/root/install-ambari-server-script.sh"
 Exec "docker compose exec -it bigtop-hostname0 /bin/bash /root/install-ambari-server-script.sh"
 

@@ -23,15 +23,35 @@ yum install -y java-1.8.0-openjdk-devel
 yum install -y ambari-agent
 yum install -y chrony
 
+# Recover agents installed from the original source-archive RPMs. The agent
+# version omits the package release suffix used by the server launcher.
+launcher=/var/lib/ambari-agent/bin/ambari-agent
+if grep -Fxq 'HASH="${buildNumber}"' "$launcher"; then
+    grep -Fxq 'VERSION="3.0.0.0"' "$launcher" || {
+        echo 'Unresolved buildNumber in an unexpected Ambari agent version; refusing repair.' >&2
+        exit 1
+    }
+    if [[ ! -e "$launcher.before-buildnumber-fix" ]]; then
+        cp -p "$launcher" "$launcher.before-buildnumber-fix"
+    fi
+    sed -i 's/^HASH="${buildNumber}"$/HASH="source-archive-3.0.0"/' "$launcher"
+fi
+env -u buildNumber -u ambariVersion bash "$launcher" --version
+env -u buildNumber -u ambariVersion bash "$launcher" --hash
+
 # setup agent
 sed -i "s/hostname=.*/hostname=bigtop-hostname0.demo.local/" /etc/ambari-agent/conf/ambari-agent.ini
 
-# we can start agent later
-AGENT_RUNNING=$(ambari-agent status |grep -c running)
-if [ "$AGENT_RUNNING" != "1" ] ; then
-	ambari-agent start
-else
+# The launcher returns 0 for running, 2 for a stale PID, and 3 for stopped.
+# Check status in a conditional so expected nonzero codes survive set -e.
+if ambari-agent status; then
 	ambari-agent restart
+else
+    status=$?
+    case "$status" in
+        2|3) ambari-agent start ;;
+        *) echo "Ambari agent status failed with exit code $status." >&2; exit "$status" ;;
+    esac
 fi
 
 # cleanup packages that don't need to be installed

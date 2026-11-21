@@ -5,8 +5,14 @@ set -ex
 dnf install createrepo -y
 
 cd /var/repo/ambari
-wget -r -N -np -nH --cut-dirs=4 --reject 'index.html*' https://www.apache-ambari.com/dist/ambari/3.0.0/rocky8/
-wget -r -N -np -nH --cut-dirs=4 --reject 'index.html*' https://www.apache-ambari.com/dist/bigtop/3.3.0/rocky8/
+if [ -f LOCAL_RPMS.sha256 ]; then
+    # Written only after build-packages.sh repo checks the package inventory.
+    test -s LOCAL_RPMS.sha256
+    sha256sum --strict -c LOCAL_RPMS.sha256
+else
+    wget -r -N -np -nH --cut-dirs=4 --reject 'index.html*' https://www.apache-ambari.com/dist/ambari/3.0.0/rocky8/
+    wget -r -N -np -nH --cut-dirs=4 --reject 'index.html*' https://www.apache-ambari.com/dist/bigtop/3.3.0/rocky8/
+fi
 
 createrepo .
 
