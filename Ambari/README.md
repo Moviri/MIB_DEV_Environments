@@ -27,11 +27,10 @@ df -h .
 
 ## 2. Prepare the RPM repository
 
-**Allow more than an hour for a clean source build.** On the AWS build host,
-the Ambari server and agent Maven build alone took 51 minutes 41 seconds.
-A separate successful Bigtop build of Hadoop and ZooKeeper took 20 minutes
-51 seconds. The full build also includes Ranger, HBase, Metrics and repository
-finalization. Its total wall-clock time has yet to be measured.
+**A clean source build took 2 hours 16 minutes 27 seconds on the AWS build
+host.** That run finalized a repository containing 74 RPMs. The measurement
+covers the complete `all --no-cache` command. Cluster bootstrap and service
+installation follow separately.
 
 From `Ambari/` in a fresh clone, run the build in a persistent Bash session.
 The `real` time printed at the end measures all stages through the finalized
@@ -159,6 +158,11 @@ checks the saved repository URL, prompts for a new Grafana password, and submits
 an asynchronous install-and-start request for `mov-ambari`. Follow its request
 in **Background Operations**. If deployment already created a cluster, inspect
 that request before retrying any failed tasks.
+
+To measure installation time, start a timer immediately before `./run.sh
+--fresh`. Stop it when the install-and-start request has completed successfully
+and all five services show green. The `deploy` command returns as soon as
+Ambari accepts the request. Record the ETL result separately.
 
 The files come from the wizard export for this Compose topology. The blueprint
 includes all four Metrics Monitors explicitly and keeps the wizard's service
